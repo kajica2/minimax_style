@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MiniMax App · Raycast-style</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ----- Raycast token set (rebranded for MiniMax) -----
+       Sources: github.com/VoltAgent/awesome-design-md/raycast/DESIGN.md,
+                styles.refero.design/raycast, designmd.co/d/raycast
+       Principles applied:
+         - Dark-only by design. Near-black canvas #040506.
+         - Barely-visible elevation steps (single pixels, no heavy shadows)
+         - Single warm coral #ff6363 brand accent — gradients used once per page max
+         - Inter for UI, no display weight games
+         - Command bar is the canonical pattern; the rest of the surface
+           (sidebar list of extensions, store items) defers to it
+         - Quick-action keys (⌘1, ⌘2) inline with item names
+    ------------------------------------------------------------------- */
+    :root {
+      --bg: #040506;
+      --bg-2: #0a0b0d;
+      --bg-3: #131418;
+      --bg-4: #1c1e23;
+      --bg-5: #25282e;
+      --surface: #131418;
+      --surface-2: #1c1e23;
+      --surface-3: #25282e;
+      --surface-hover: #2a2d34;
+      --ink-1: #ffffff;
+      --ink-2: #e6e8eb;
+      --ink-3: #a8acb3;
+      --ink-4: #797d85;
+      --ink-5: #4d5057;
+      --border: rgba(255,255,255,0.08);
+      --border-soft: rgba(255,255,255,0.04);
+      --border-strong: rgba(255,255,255,0.14);
+      --accent: #ff6363;
+      --accent-hover: #ff7a7a;
+      --accent-soft: rgba(255,99,99,0.14);
+      --accent-glow: 0 0 12px rgba(255,99,99,0.4);
+      --gradient: linear-gradient(135deg, #ff6363 0%, #ff8b3d 100%);
+      --success: #46c46c;
+      --warn: #f5a623;
+      --info: #5e9eff;
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+      --r-sm: 4px; --r-md: 6px; --r-lg: 8px; --r-pill: 6px;
+      --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;background:var(--bg);color:var(--ink-1);font-family:var(--font-sans);font-size:13.5px;line-height:1.45;-webkit-font-smoothing:antialiased}
+    code,pre,.mono{font-family:var(--font-mono);font-size:12px}
+    a{color:inherit;text-decoration:none}
+    button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
+
+    /* === App shell: floating command bar over sidebar === */
+    .app{display:grid;grid-template-columns:64px 280px 1fr;height:100vh;background:var(--bg)}
+    .ws-rail{background:var(--bg-2);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:4px}
+    .ws-glyph{width:36px;height:36px;border-radius:8px;background:var(--gradient);display:grid;place-items:center;color:#000;font-weight:800;font-size:16px;margin-bottom:6px;box-shadow:0 0 18px rgba(255,99,99,0.3)}
+    .ws-av{width:34px;height:34px;border-radius:7px;background:var(--bg-3);border:1px solid var(--border);display:grid;place-items:center;font-size:12px;font-weight:600;color:var(--ink-2);cursor:pointer;position:relative}
+    .ws-av.active{background:var(--gradient);color:#000;border-color:transparent;box-shadow:0 0 14px rgba(255,99,99,0.4)}
+    .ws-divider{width:24px;height:1px;background:var(--border);margin:4px 0}
+    .ws-add{width:34px;height:34px;border-radius:7px;background:transparent;border:1px dashed var(--border-strong);display:grid;place-items:center;font-size:18px;color:var(--ink-4);cursor:pointer}
+    .ws-add:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+    .spacer{flex:1}
+
+    .sidebar{background:var(--bg-2);border-right:1px solid var(--border);overflow-y:auto;padding:8px 0;display:flex;flex-direction:column}
+    .side-head{display:flex;align-items:center;gap:6px;padding:6px 12px 8px;border-bottom:1px solid var(--border-soft);margin-bottom:4px}
+    .side-head .name{font-weight:600;font-size:13px;color:var(--ink-1);letter-spacing:-0.005em;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .side-head .av{width:18px;height:18px;border-radius:4px;background:var(--gradient);display:grid;place-items:center;color:#000;font-size:9px;font-weight:800;flex-shrink:0}
+    .side-head .caret{color:var(--ink-4);font-size:9px}
+    .side-section{margin:6px 0}
+    .side-section .label{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-4);font-weight:600;padding:4px 12px 2px;display:flex;justify-content:space-between;align-items:center}
+    .side-section .label .badge{font-size:9px;color:var(--accent);background:var(--accent-soft);padding:1px 5px;border-radius:3px;font-family:var(--font-mono);font-weight:600}
+    .side-item{display:flex;align-items:center;gap:8px;padding:4px 12px;color:var(--ink-3);font-size:12.5px;cursor:pointer;line-height:1.3}
+    .side-item:hover{background:var(--bg-3);color:var(--ink-1)}
+    .side-item.active{background:var(--bg-4);color:var(--ink-1);font-weight:500;box-shadow:inset 2px 0 0 var(--accent)}
+    .side-item .ico{width:14px;height:14px;color:var(--ink-4);stroke:currentColor;fill:none;stroke-width:1.6;flex-shrink:0}
+    .side-item.active .ico{color:var(--accent)}
+    .side-item .badge{margin-left:auto;font-size:10px;color:var(--ink-4);font-family:var(--font-mono)}
+    .side-item .shortcut{margin-left:auto;font-size:10px;color:var(--ink-5);font-family:var(--font-mono);font-weight:500}
+
+    /* === Main content === */
+    .main{display:grid;grid-template-rows:auto 1fr;overflow:hidden;background:var(--bg)}
+    .topbar{display:grid;grid-template-columns:1fr auto;align-items:center;padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--border);gap:14px;min-height:46px}
+    .topbar-title{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--ink-1);letter-spacing:-0.005em}
+    .topbar-title .ico{color:var(--accent);width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.6}
+    .topbar-title .path{color:var(--ink-3);font-weight:400}
+    .topbar-actions{display:flex;align-items:center;gap:6px}
+    .btn{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:var(--r-pill);font-size:12px;font-weight:500;border:1px solid transparent;cursor:pointer;transition:all 0.1s ease;white-space:nowrap;font-family:inherit}
+    .btn-primary{background:var(--accent);color:#000;font-weight:600}
+    .btn-primary:hover{background:var(--accent-hover);box-shadow:var(--accent-glow)}
+    .btn-ghost{background:transparent;color:var(--ink-2);border:1px solid var(--border)}
+    .btn-ghost:hover{background:var(--bg-3);color:var(--ink-1);border-color:var(--border-strong)}
+    .btn-sm{padding:3px 8px;font-size:11.5px}
+    .icon-btn{width:26px;height:26px;display:grid;place-items:center;border-radius:5px;color:var(--ink-3);border:1px solid transparent;cursor:pointer}
+    .icon-btn:hover{background:var(--bg-3);color:var(--ink-1);border-color:var(--border)}
+
+    .content{overflow-y:auto;padding:24px 28px 60px}
+    .section{margin-bottom:32px}
+    .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px}
+    .section-head h2{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink-3);margin:0;display:flex;align-items:center;gap:8px}
+    .section-head h2 .count{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-4);background:var(--bg-3);padding:1px 6px;border-radius:3px}
+    .section-head .right{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-3)}
+    .filter{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:var(--bg-3);border:1px solid var(--border);border-radius:5px;font-size:11px;color:var(--ink-2);cursor:pointer}
+    .filter:hover{border-color:var(--border-strong)}
+
+    /* === Command preview (the canonical Raycast widget) === */
+    .cmd-preview{margin-bottom:32px;background:linear-gradient(180deg,var(--bg-3),var(--bg-2));border:1px solid var(--border-strong);border-radius:12px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.5),0 0 0 1px rgba(255,99,99,0.08)}
+    .cmd-search{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--border-soft)}
+    .cmd-search .ico{color:var(--accent);width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7}
+    .cmd-search input{flex:1;background:none;border:0;outline:0;color:var(--ink-1);font:inherit;font-size:14.5px;font-weight:500}
+    .cmd-search input::placeholder{color:var(--ink-4)}
+    .cmd-search .kbd{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-4);background:var(--bg-2);border:1px solid var(--border);padding:1px 6px;border-radius:3px}
+    .cmd-tabs{display:flex;align-items:center;gap:0;padding:6px 12px;border-bottom:1px solid var(--border-soft);background:var(--bg-2)}
+    .cmd-tab{padding:4px 11px;font-size:11.5px;font-weight:500;color:var(--ink-3);cursor:pointer;border-radius:5px;text-transform:uppercase;letter-spacing:0.06em;display:flex;align-items:center;gap:5px}
+    .cmd-tab:hover{color:var(--ink-1)}
+    .cmd-tab.active{background:var(--bg-3);color:var(--ink-1);box-shadow:inset 0 0 0 1px var(--border)}
+    .cmd-tab .count{font-size:10px;color:var(--ink-4);background:var(--bg-2);padding:0 5px;border-radius:2px}
+    .cmd-results{display:flex;flex-direction:column}
+    .cmd-row{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--border-soft);cursor:pointer;transition:background 0.08s ease}
+    .cmd-row:last-child{border-bottom:0}
+    .cmd-row:hover{background:var(--bg-3)}
+    .cmd-row.selected{background:var(--bg-4);box-shadow:inset 2px 0 0 var(--accent)}
+    .cmd-row .ic{width:30px;height:30px;border-radius:7px;background:var(--bg-2);border:1px solid var(--border);display:grid;place-items:center;color:var(--ink-2);flex-shrink:0;font-size:13px}
+    .cmd-row .ic.pink{background:var(--gradient);color:#000;border-color:transparent}
+    .cmd-row .ic.blue{background:linear-gradient(135deg,#5e9eff,#4060e0);color:#fff;border-color:transparent}
+    .cmd-row .ic.green{background:linear-gradient(135deg,#46c46c,#1c9a4a);color:#fff;border-color:transparent}
+    .cmd-row .ic.purple{background:linear-gradient(135deg,#a855ff,#6e3acc);color:#fff;border-color:transparent}
+    .cmd-row .ic.yellow{background:linear-gradient(135deg,#ffd400,#f5a623);color:#000;border-color:transparent}
+    .cmd-row .body{min-width:0}
+    .cmd-row .title{font-size:13px;font-weight:500;color:var(--ink-1);display:flex;align-items:center;gap:5px}
+    .cmd-row .subtitle{font-size:11.5px;color:var(--ink-3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cmd-row .match{color:var(--accent);font-weight:600}
+    .cmd-row .tags{display:flex;align-items:center;gap:3px}
+    .cmd-row .tag{font-size:9.5px;color:var(--ink-3);background:var(--bg-2);border:1px solid var(--border);padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:0.04em;font-weight:600}
+    .cmd-row .tag.recent{color:var(--accent);background:var(--accent-soft);border-color:rgba(255,99,99,0.3)}
+    .cmd-row .kbd{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);background:var(--bg-2);border:1px solid var(--border);padding:1px 5px;border-radius:3px}
+
+    /* === Quick actions grid (3-up) === */
+    .quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:20px}
+    .qcard{padding:12px 14px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-lg);cursor:pointer;transition:background 0.1s ease}
+    .qcard:hover{background:var(--bg-3);border-color:var(--border-strong)}
+    .qcard .ic{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;margin-bottom:8px;font-size:14px;color:#000}
+    .qcard .ic.a{background:var(--gradient)}
+    .qcard .ic.b{background:linear-gradient(135deg,#5e9eff,#4060e0);color:#fff}
+    .qcard .ic.c{background:linear-gradient(135deg,#46c46c,#1c9a4a);color:#fff}
+    .qcard .ic.d{background:linear-gradient(135deg,#a855ff,#6e3acc);color:#fff}
+    .qcard .title{font-size:12.5px;font-weight:600;color:var(--ink-1)}
+    .qcard .sub{font-size:11px;color:var(--ink-3);margin-top:1px}
+
+    /* === Extension store cards === */
+    .ext-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .ext{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;display:flex;flex-direction:column;gap:10px;transition:border-color 0.1s ease;cursor:pointer}
+    .ext:hover{border-color:var(--border-strong)}
+    .ext-head{display:flex;align-items:flex-start;gap:10px}
+    .ext .ic{width:40px;height:40px;border-radius:9px;background:var(--bg-3);border:1px solid var(--border);display:grid;place-items:center;font-size:18px;flex-shrink:0;color:var(--ink-2)}
+    .ext .ic.a{background:var(--gradient);color:#000}
+    .ext .ic.b{background:linear-gradient(135deg,#5e9eff,#4060e0);color:#fff}
+    .ext .ic.c{background:linear-gradient(135deg,#46c46c,#1c9a4a);color:#fff}
+    .ext .ic.d{background:linear-gradient(135deg,#a855ff,#6e3acc);color:#fff}
+    .ext .name{font-size:13.5px;font-weight:600;color:var(--ink-1)}
+    .ext .dev{font-size:11px;color:var(--ink-3);margin-top:1px}
+    .ext .desc{font-size:12px;color:var(--ink-2);line-height:1.45}
+    .ext .foot{display:flex;align-items:center;justify-content:space-between;padding-top:6px;border-top:1px solid var(--border-soft);font-size:11px;color:var(--ink-3)}
+    .ext .foot .install{font-size:10.5px;color:var(--accent);font-weight:600}
+
+    /* === Token panel === */
+    .token-panel{margin-top:32px;padding:24px 28px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-lg)}
+    .token-panel h2{font-size:18px;font-weight:600;letter-spacing:-0.012em;margin:0 0 4px;color:var(--ink-1)}
+    .token-panel h2 strong{color:var(--accent);font-weight:700}
+    .token-panel .sub{color:var(--ink-3);font-size:13px;margin-bottom:18px;max-width:680px;line-height:1.55}
+    .section-title{font-size:10.5px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-3);font-weight:600;margin:14px 0 8px}
+    .token-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-bottom:10px}
+    .tok{background:var(--bg-3);border:1px solid var(--border);border-radius:5px;padding:8px 10px;display:flex;align-items:center;gap:9px}
+    .tok .chip{width:26px;height:26px;border-radius:5px;border:1px solid var(--border);flex-shrink:0}
+    .tok .name{font-family:var(--font-mono);font-size:11px;color:var(--ink-1);font-weight:500}
+    .tok .val{font-family:var(--font-mono);font-size:10px;color:var(--ink-4);margin-top:2px}
+    .code-block{background:var(--bg);color:var(--ink-2);border:1px solid var(--border);border-radius:var(--r-md);padding:16px 18px;font-family:var(--font-mono);font-size:11.5px;line-height:1.7;overflow-x:auto;white-space:pre}
+    .code-block .k{color:#5e9eff}
+    .code-block .s{color:#ff6363}
+    .code-block .c{color:var(--ink-5);font-style:italic}
+    .code-block .v{color:#ffd400}
+
+    .back-bar{padding:6px 14px;background:var(--bg-2);border-bottom:1px solid var(--border);font-size:11px;display:flex;justify-content:space-between;align-items:center}
+    .back-bar a{color:var(--ink-3)}
+    .back-bar a:hover{color:var(--accent)}
+    .back-bar .tag-version{font-family:var(--font-mono);color:var(--ink-4)}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="ws-rail">
+    <div class="ws-glyph" title="MiniMax">M</div>
+    <div class="ws-av active" title="Command">⌘</div>
+    <div class="ws-divider"></div>
+    <div class="ws-av" title="Extensions">E</div>
+    <div class="ws-av" title="Snippets">S</div>
+    <div class="ws-av" title="Clipboard">C</div>
+    <div class="ws-divider"></div>
+    <div class="ws-av" title="Window mgmt">W</div>
+    <div class="ws-add" title="Add">+</div>
+    <div class="spacer"></div>
+    <div class="ws-av" title="Settings" style="background:var(--bg-3);color:var(--ink-3)">⚙</div>
+  </aside>
+
+  <aside class="sidebar">
+    <div class="side-head">
+      <span class="av">K</span>
+      <span class="name">Quick Search</span>
+      <span class="caret">▾</span>
+    </div>
+
+    <div class="side-section">
+      <div class="label">Search</div>
+      <div class="side-item active">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg>
+        Quick Search
+        <span class="shortcut">⌘Space</span>
+      </div>
+      <div class="side-item">
+        <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        Window Management
+      </div>
+      <div class="side-item">
+        <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18"/></svg>
+        Calculator
+        <span class="shortcut">⌘C</span>
+      </div>
+      <div class="side-item">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M12 7v5l3 2"/></svg>
+        Timer
+      </div>
+    </div>
+
+    <div class="side-section">
+      <div class="label">Productivity <span class="badge">3</span></div>
+      <div class="side-item">
+        <svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+        Clipboard History
+        <span class="shortcut">⌘⇧C</span>
+      </div>
+      <div class="side-item">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+        Snippets
+      </div>
+      <div class="side-item">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        AI Chat
+        <span class="shortcut">⌘L</span>
+      </div>
+    </div>
+
+    <div class="side-section">
+      <div class="label">Quicklinks</div>
+      <div class="side-item">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
+        minmax-platform
+      </div>
+      <div class="side-item">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
+        minimax-api
+      </div>
+      <div class="side-item">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
+        minimax-docs
+      </div>
+      <div class="side-item">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
+        raycast-store
+      </div>
+    </div>
+
+    <div class="side-section">
+      <div class="label">System</div>
+      <div class="side-item">
+        <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+        Quit MiniMax
+        <span class="shortcut">⌘Q</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="back-bar">
+      <a href="styles.html">← All styles</a>
+      <span class="tag-version">webapp-raycast · v1</span>
+    </div>
+    <div class="topbar">
+      <div class="topbar-title">
+        <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span>Quick Search</span>
+        <span class="path">· 1,284 indexed items</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost btn-sm">Filters</button>
+        <button class="btn btn-ghost btn-sm">History</button>
+        <button class="btn btn-primary btn-sm">⌘ Space</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- ==== The command bar — the canonical Raycast widget ==== -->
+      <div class="cmd-preview">
+        <div class="cmd-search">
+          <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input value="deploy" placeholder="Search apps, files, commands…"/>
+          <span class="kbd">⏎</span>
+          <span class="kbd">esc</span>
+        </div>
+        <div class="cmd-tabs">
+          <span class="cmd-tab active">All <span class="count">42</span></span>
+          <span class="cmd-tab">Apps <span class="count">12</span></span>
+          <span class="cmd-tab">Commands <span class="count">18</span></span>
+          <span class="cmd-tab">Snippets <span class="count">8</span></span>
+          <span class="cmd-tab">Quicklinks <span class="count">4</span></span>
+        </div>
+        <div class="cmd-results">
+          <div class="cmd-row selected">
+            <div class="ic pink">▶</div>
+            <div class="body">
+              <div class="title">Deploy <span class="match">minimax-platform</span> to production</div>
+              <div class="subtitle">Run vercel --prod against minimax-platform · last deployed 2m ago · 38s</div>
+            </div>
+            <div class="tags"><span class="tag recent">recent</span></div>
+            <span class="kbd">⌘⏎</span>
+          </div>
+          <div class="cmd-row">
+            <div class="ic blue">D</div>
+            <div class="body">
+              <div class="title">Open <span class="match">deploy</span>ment dashboard</div>
+              <div class="subtitle">vercel.com/minimax-platform/deployments · 42 deploys last 30d</div>
+            </div>
+            <div class="tags"></div>
+            <span class="kbd">⏎</span>
+          </div>
+          <div class="cmd-row">
+            <div class="ic green">G</div>
+            <div class="body">
+              <div class="title">View <span class="match">deploy</span> log: d4f8a2c1</div>
+              <div class="subtitle">vercel logs minimax-platform@main · tail mode available</div>
+            </div>
+            <div class="tags"><span class="tag">shell</span></div>
+            <span class="kbd">⏎</span>
+          </div>
+          <div class="cmd-row">
+            <div class="ic purple">R</div>
+            <div class="body">
+              <div class="title">Rollback <span class="match">deploy</span>ment to last green</div>
+              <div class="subtitle">vercel rollback minimax-platform · last green: a92c1e0b</div>
+            </div>
+            <div class="tags"><span class="tag">destructive</span></div>
+            <span class="kbd">⌘⌥⏎</span>
+          </div>
+          <div class="cmd-row">
+            <div class="ic yellow">⚙</div>
+            <div class="body">
+              <div class="title">Edit <span class="match">deploy</span>ment protection rules</div>
+              <div class="subtitle">vercel.com/minimax-platform/settings/deployment-protection</div>
+            </div>
+            <div class="tags"></div>
+            <span class="kbd">⏎</span>
+          </div>
+          <div class="cmd-row">
+            <div class="ic pink">+</div>
+            <div class="body">
+              <div class="title">Create <span class="match">deploy</span> hook for stripe webhook</div>
+              <div class="subtitle">vercel integrations add stripe · requires admin</div>
+            </div>
+            <div class="tags"></div>
+            <span class="kbd">⏎</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==== Quick actions (the 4 gradient tiles) ==== -->
+      <div class="section">
+        <div class="section-head">
+          <h2>Quick actions <span class="count">4</span></h2>
+          <div class="right">pinned by you</div>
+        </div>
+        <div class="quick-grid">
+          <div class="qcard">
+            <div class="ic a">▶</div>
+            <div class="title">Deploy</div>
+            <div class="sub">Trigger a production deploy</div>
+          </div>
+          <div class="qcard">
+            <div class="ic b">D</div>
+            <div class="title">Dashboard</div>
+            <div class="sub">Open project dashboard</div>
+          </div>
+          <div class="qcard">
+            <div class="ic c">G</div>
+            <div class="title">Git status</div>
+            <div class="sub">View branch + working tree</div>
+          </div>
+          <div class="qcard">
+            <div class="ic d">R</div>
+            <div class="title">Run command</div>
+            <div class="sub">Execute a saved command</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==== Extension store (3-up grid) ==== -->
+      <div class="section">
+        <div class="section-head">
+          <h2>Extension store <span class="count">218</span></h2>
+          <div class="right">
+            <span class="filter">All categories ▾</span>
+            <span class="filter">Featured</span>
+          </div>
+        </div>
+        <div class="ext-grid">
+          <div class="ext">
+            <div class="ext-head">
+              <div class="ic a">G</div>
+              <div>
+                <div class="name">GitHub</div>
+                <div class="dev">by github · official</div>
+              </div>
+            </div>
+            <div class="desc">Open repos, issues, PRs, and code from any project. Auth via personal access token.</div>
+            <div class="foot"><span>⭐ 4.8 · 12.4k installs</span><span class="install">✓ Installed</span></div>
+          </div>
+          <div class="ext">
+            <div class="ext-head">
+              <div class="ic b">F</div>
+              <div>
+                <div class="name">Figma</div>
+                <div class="dev">by figma · official</div>
+              </div>
+            </div>
+            <div class="desc">Search files, copy components, jump to frames, and open recent projects without leaving the bar.</div>
+            <div class="foot"><span>⭐ 4.7 · 8.2k installs</span><span class="install">+ Install</span></div>
+          </div>
+          <div class="ext">
+            <div class="ext-head">
+              <div class="ic c">L</div>
+              <div>
+                <div class="name">Linear</div>
+                <div class="dev">by linear · official</div>
+              </div>
+            </div>
+            <div class="desc">Quickly create, search, and update issues. Supports workspaces, projects, and cycles.</div>
+            <div class="foot"><span>⭐ 4.9 · 18.1k installs</span><span class="install">✓ Installed</span></div>
+          </div>
+          <div class="ext">
+            <div class="ext-head">
+              <div class="ic d">N</div>
+              <div>
+                <div class="name">Notion</div>
+                <div class="dev">by notion · official</div>
+              </div>
+            </div>
+            <div class="desc">Search pages, create docs, append to existing pages, and navigate nested workspaces.</div>
+            <div class="foot"><span>⭐ 4.6 · 9.8k installs</span><span class="install">+ Install</span></div>
+          </div>
+          <div class="ext">
+            <div class="ext-head">
+              <div class="ic a">S</div>
+              <div>
+                <div class="name">Spotify</div>
+                <div class="dev">by community</div>
+              </div>
+            </div>
+            <div class="desc">Control playback, search tracks, manage playlists. Shows current track as a status bar item.</div>
+            <div class="foot"><span>⭐ 4.5 · 6.2k installs</span><span class="install">+ Install</span></div>
+          </div>
+          <div class="ext">
+            <div class="ext-head">
+              <div class="ic b">1</div>
+              <div>
+                <div class="name">1Password</div>
+                <div class="dev">by 1password · official</div>
+              </div>
+            </div>
+            <div class="desc">Search vaults, copy passwords, fill sign-in forms, and generate new credentials.</div>
+            <div class="foot"><span>⭐ 4.8 · 14.7k installs</span><span class="install">+ Install</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Token panel -->
+      <div class="token-panel">
+        <h2>Skinning system — <strong>command-cockpit in 4 tokens</strong></h2>
+        <p style="color:var(--ink-3);font-size:13px;margin-bottom:18px;max-width:680px;line-height:1.55">Raycast is dark-only by design. The single warm coral accent is the entire brand identity — gradients are used once per page maximum, on the workspace glyph and the active selection marker. Barely-visible elevation steps replace shadows. To rebrand this command-cockpit, change the 4 groups below.</p>
+
+        <div class="section-title">Canvas — five dark steps, no shadows</div>
+        <div class="token-grid">
+          <div class="tok"><div class="chip" style="background:#040506"></div><div><div class="name">--bg</div><div class="val">#040506 · canvas</div></div></div>
+          <div class="tok"><div class="chip" style="background:#131418"></div><div><div class="name">--surface</div><div class="val">#131418 · panel</div></div></div>
+          <div class="tok"><div class="chip" style="background:#1c1e23"></div><div><div class="name">--surface-2</div><div class="val">#1c1e23 · row</div></div></div>
+          <div class="tok"><div class="chip" style="background:#25282e"></div><div><div class="name">--surface-3</div><div class="val">#25282e · selected</div></div></div>
+        </div>
+
+        <div class="section-title">Accent — single warm coral, one gradient</div>
+        <div class="token-grid">
+          <div class="tok"><div class="chip" style="background:#ff6363;box-shadow:0 0 8px #ff6363"></div><div><div class="name">--accent</div><div class="val">#ff6363 · brand</div></div></div>
+          <div class="tok"><div class="chip" style="background:linear-gradient(135deg,#ff6363,#ff8b3d)"></div><div><div class="name">--gradient</div><div class="val">135° · coral→orange</div></div></div>
+          <div class="tok"><div class="chip" style="background:rgba(255,99,99,0.14)"></div><div><div class="name">--accent-soft</div><div class="val">rgba 14% · bg</div></div></div>
+        </div>
+
+        <div class="section-title">Skinning recipe</div>
+<div class="code-block"><span class="c">/* Skin this command-cockpit by changing 4 values.
+   The coral gradient is the entire brand identity. */</span>
+<span class="k">:root</span> {
+  <span class="k">--bg</span>:        <span class="v">#040506</span>;   <span class="c">/* near-black canvas */</span>
+  <span class="k">--surface</span>:   <span class="v">#131418</span>;   <span class="c">/* command bar surface */</span>
+  <span class="k">--accent</span>:    <span class="v">#ff6363</span>;   <span class="c">/* coral — single chromatic */</span>
+  <span class="k">--gradient</span>:  <span class="v">linear-gradient(135deg, #ff6363, #ff8b3d)</span>;
+}
+
+<span class="c">/* Result: every selected row, every active tab, every
+   quick-action icon, every recent badge, every ⌘K
+   pill picks up the new gradient. Used once per page. */</span></div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

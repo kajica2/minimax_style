@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MiniMax App · Mintlify-style</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ----- Mintlify token set (rebranded for MiniMax) -----
+       Sources: mintlify.com/design.md, open-design.ai/mintlify, opendesigner.io/mintlify
+       Principles applied:
+         - Pure white #fefdfb canvas (NOT pure white, with micro-warmth)
+         - Brand green #0c8c5e (light) / #18e299 (dark) — hue shifts per theme
+         - Inter with tight negative tracking (-0.8 to -1.28px) at display sizes
+         - Geist Mono for code labels: uppercase, tracked-out
+         - Ultra-round corners: 16px for containers, 24px for featured, pill for buttons
+         - Subtle 5% opacity borders, atmospheric gradient hero (green→white cloud)
+         - Clean white throughout — depth via borders, not shadows
+    ------------------------------------------------------------------- */
+    :root {
+      --bg: #fefdfb;
+      --bg-2: #faf8f5;
+      --bg-3: #ebe9e6;
+      --surface: #ffffff;
+      --surface-2: #faf8f5;
+      --ink-1: #121715;
+      --ink-2: #485450;
+      --ink-3: #717d79;
+      --ink-4: #969e9b;
+      --border-line: #f1f0ee;
+      --border: rgba(0,0,0,0.05);
+      --border-strong: rgba(0,0,0,0.08);
+      --border-stronger: rgba(0,0,0,0.14);
+      --accent: #0c8c5e;
+      --accent-vivid: #1fa77a;
+      --accent-light: #d4fae8;
+      --accent-bg: #18e299;
+      --error: #e11d48;
+      --warn: #d97706;
+      --info: #0284c7;
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+      --r-sm: 6px; --r-md: 8px; --r-lg: 16px; --r-xl: 24px; --r-pill: 9999px;
+      --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-12: 48px; --s-16: 64px; --s-24: 96px;
+      --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(24,226,153,0.18) 0%, rgba(212,250,232,0.4) 35%, rgba(254,253,251,0) 70%);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;background:var(--bg);color:var(--ink-1);font-family:var(--font-sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+    code,pre,.mono{font-family:var(--font-mono);font-size:13px}
+    a{color:var(--accent);text-decoration:none}
+    a:hover{color:var(--accent-vivid)}
+    button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
+
+    /* === Top nav === */
+    .topnav{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:0 32px;height:64px;background:rgba(254,253,251,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;gap:32px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;letter-spacing:-0.012em;color:var(--ink-1)}
+    .brand-glyph{width:28px;height:28px;background:var(--accent);border-radius:8px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px}
+    .nav{display:flex;align-items:center;gap:4px;justify-content:center}
+    .nav .item{padding:6px 12px;border-radius:8px;font-size:14px;font-weight:500;color:var(--ink-2);cursor:pointer}
+    .nav .item:hover{background:var(--bg-2);color:var(--ink-1)}
+    .nav .item.active{color:var(--ink-1);font-weight:600}
+    .nav-actions{display:flex;align-items:center;gap:8px}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r-pill);font-size:13.5px;font-weight:500;border:1px solid transparent;cursor:pointer;transition:all 0.12s ease;white-space:nowrap}
+    .btn-dark{background:var(--ink-1);color:#fff}
+    .btn-dark:hover{background:#000}
+    .btn-ghost{background:transparent;color:var(--ink-1);border:1px solid var(--border-strong);border-radius:var(--r-pill)}
+    .btn-ghost:hover{background:var(--bg-2);border-color:var(--border-stronger)}
+    .btn-accent{background:var(--accent);color:#fff;font-weight:600}
+    .btn-accent:hover{background:#0a7a52}
+    .btn-sm{padding:5px 12px;font-size:12.5px}
+    .search{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--ink-3);font-size:12.5px;cursor:pointer;min-width:200px}
+    .search:hover{border-color:var(--border-strong);background:var(--surface)}
+    .search .ico{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.6}
+    .search .kbd{margin-left:auto;font-family:var(--font-mono);font-size:10.5px;background:#fff;border:1px solid var(--border);padding:1px 5px;border-radius:3px;color:var(--ink-3)}
+
+    /* === Hero with atmospheric green-white gradient === */
+    .hero{padding:96px 32px 80px;text-align:center;background:var(--gradient-hero);position:relative;overflow:hidden}
+    .hero::before{content:"";position:absolute;left:50%;top:0;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(24,226,153,0.18) 0%,transparent 60%);transform:translateX(-50%) translateY(-30%);pointer-events:none}
+    .hero-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(255,255,255,0.6);border:1px solid var(--border);border-radius:var(--r-pill);font-size:11.5px;font-weight:500;color:var(--ink-2);margin-bottom:20px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+    .hero-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent)}
+    .hero h1{font-size:64px;font-weight:600;letter-spacing:-1.28px;line-height:1.05;margin:0 0 18px;color:var(--ink-1);position:relative;z-index:1;max-width:780px;margin-left:auto;margin-right:auto}
+    .hero h1 .hi{color:var(--accent)}
+    .hero p{font-size:18px;font-weight:400;color:var(--ink-2);max-width:620px;margin:0 auto 28px;line-height:1.5;position:relative;z-index:1}
+    .hero-ctas{display:flex;align-items:center;justify-content:center;gap:10px;position:relative;z-index:1}
+    .hero-trust{margin-top:48px;display:flex;align-items:center;justify-content:center;gap:32px;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink-3);font-weight:600;font-family:var(--font-mono);position:relative;z-index:1}
+    .hero-trust span{color:var(--ink-2)}
+
+    /* === Page content === */
+    .content{padding:64px 32px 80px;max-width:1200px;margin:0 auto}
+    .section{margin-bottom:64px}
+    .section-head{text-align:center;margin-bottom:32px}
+    .section-head .kicker{font-size:11px;text-transform:uppercase;letter-spacing:0.18em;color:var(--accent);font-weight:700;font-family:var(--font-sans);margin-bottom:8px}
+    .section-head h2{font-size:36px;font-weight:600;letter-spacing:-0.8px;line-height:1.15;margin:0 0 10px;color:var(--ink-1)}
+    .section-head p{font-size:15.5px;color:var(--ink-2);max-width:600px;margin:0 auto;line-height:1.55}
+
+    /* === Feature cards (3-up) === */
+    .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    .feature{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:24px;transition:border-color 0.12s ease,box-shadow 0.12s ease}
+    .feature:hover{border-color:var(--border-strong);box-shadow:0 1px 2px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.04)}
+    .feature .icon{width:36px;height:36px;border-radius:10px;background:var(--accent-light);display:grid;place-items:center;color:var(--accent);margin-bottom:14px}
+    .feature .icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7}
+    .feature h3{font-size:18px;font-weight:600;letter-spacing:-0.2px;margin:0 0 8px;color:var(--ink-1)}
+    .feature p{font-size:14px;color:var(--ink-2);margin:0 0 16px;line-height:1.55}
+    .feature .link{font-size:12.5px;font-weight:600;color:var(--accent);display:inline-flex;align-items:center;gap:4px}
+    .feature .link:hover{color:var(--accent-vivid)}
+
+    /* === Code preview block === */
+    .code-split{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:stretch}
+    .code-tabs{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;display:flex;flex-direction:column}
+    .code-tabs-head{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg-2)}
+    .code-tabs-tabs{display:flex;align-items:center;gap:2px}
+    .code-tabs-tab{padding:4px 12px;font-size:12px;font-weight:500;color:var(--ink-3);cursor:pointer;border-radius:6px}
+    .code-tabs-tab:hover{color:var(--ink-1)}
+    .code-tabs-tab.active{background:var(--surface);color:var(--ink-1);box-shadow:0 0 0 1px var(--border)}
+    .code-tabs-tab .ico{width:11px;height:11px;display:inline-block;margin-right:5px;border-radius:3px;vertical-align:middle}
+    .code-tabs-tab.ts .ico{background:#3178c6}
+    .code-tabs-tab.py .ico{background:#3776ab}
+    .code-tabs-tab.go .ico{background:#00add8}
+    .code-tabs-meta{font-size:11px;color:var(--ink-3);font-family:var(--font-mono)}
+    .code-tabs-body{padding:18px 20px;font-family:var(--font-mono);font-size:12.5px;line-height:1.75;color:var(--ink-1);overflow-x:auto;background:#faf8f5;flex:1;min-height:280px}
+    .kw{color:var(--accent);font-weight:500}
+    .str{color:#d97706}
+    .cmt{color:var(--ink-3);font-style:italic}
+    .fn{color:var(--info)}
+    .ty{color:#7c3aed}
+    .num{color:#0c8c5e}
+
+    /* === Code callout === */
+    .code-callout{padding:24px 28px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);display:flex;align-items:flex-start;gap:18px}
+    .code-callout .num{font-family:var(--font-display);font-size:32px;font-weight:700;color:var(--accent);line-height:1;flex-shrink:0;letter-spacing:-0.02em}
+    .code-callout h3{font-size:18px;font-weight:600;letter-spacing:-0.2px;margin:0 0 6px;color:var(--ink-1)}
+    .code-callout p{font-size:14px;color:var(--ink-2);margin:0 0 12px;line-height:1.55}
+    .code-callout code{font-family:var(--font-mono);font-size:12.5px;background:var(--bg-2);padding:2px 8px;border-radius:5px;color:var(--accent)}
+
+    /* === Logo strip === */
+    .logo-strip{display:flex;align-items:center;justify-content:space-between;padding:32px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);flex-wrap:wrap;gap:24px}
+    .logo-strip .label{font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink-3);font-weight:600;font-family:var(--font-sans);width:100%;text-align:center;margin-bottom:8px}
+    .logo-strip .logos{display:flex;align-items:center;justify-content:space-around;width:100%;flex-wrap:wrap;gap:20px;opacity:0.7}
+    .logo-strip .logos span{font-weight:700;font-size:14px;color:var(--ink-2);letter-spacing:-0.005em}
+    .logo-strip .logos span.t{font-family:"Inter";font-weight:500}
+
+    /* === CTA strip === */
+    .cta-strip{margin:0 32px 80px;padding:48px 56px;background:linear-gradient(135deg,#0c8c5e 0%,#18e299 100%);border-radius:var(--r-xl);text-align:center;color:#fff;box-shadow:0 8px 24px rgba(12,140,94,0.25)}
+    .cta-strip h2{font-size:32px;font-weight:600;letter-spacing:-0.6px;margin:0 0 10px;line-height:1.2}
+    .cta-strip p{font-size:15px;opacity:0.9;margin:0 0 22px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.5}
+    .cta-strip .btns{display:flex;align-items:center;justify-content:center;gap:8px}
+    .cta-strip .btn-dark{background:#fff;color:var(--ink-1)}
+    .cta-strip .btn-dark:hover{background:#f0f0f0}
+    .cta-strip .btn-ghost{background:transparent;border-color:rgba(255,255,255,0.3);color:#fff}
+    .cta-strip .btn-ghost:hover{background:rgba(255,255,255,0.1)}
+
+    /* === Footer === */
+    .footer{background:var(--bg-2);border-top:1px solid var(--border);padding:48px 32px 32px}
+    .footer-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1.4fr repeat(4,1fr);gap:32px}
+    .footer-brand .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;margin-bottom:12px}
+    .footer-brand p{font-size:13px;color:var(--ink-3);line-height:1.55;max-width:280px}
+    .footer-col h4{font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink-1);font-weight:700;margin:0 0 12px}
+    .footer-col a{display:block;font-size:13px;color:var(--ink-3);padding:4px 0;text-decoration:none}
+    .footer-col a:hover{color:var(--ink-1)}
+    .footer-bottom{max-width:1200px;margin:32px auto 0;padding-top:24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--ink-3)}
+
+    /* === Token panel === */
+    .token-panel{margin:64px 32px 0;padding:32px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);max-width:1200px}
+    .token-panel h2{font-size:26px;font-weight:600;letter-spacing:-0.5px;margin:0 0 6px}
+    .token-panel h2 strong{color:var(--accent);font-weight:600}
+    .token-panel .sub{color:var(--ink-2);font-size:14.5px;margin-bottom:20px;max-width:680px;line-height:1.55}
+    .section-title{font-size:10.5px;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink-3);font-weight:700;margin:16px 0 8px}
+    .token-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-bottom:10px}
+    .tok{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:9px}
+    .tok .chip{width:26px;height:26px;border-radius:5px;border:1px solid var(--border);flex-shrink:0}
+    .tok .name{font-family:var(--font-mono);font-size:11px;color:var(--ink-1);font-weight:500}
+    .tok .val{font-family:var(--font-mono);font-size:10px;color:var(--ink-3);margin-top:2px}
+    .code-block{background:var(--ink-1);color:#d4d4d4;border-radius:var(--r-lg);padding:18px 20px;font-family:var(--font-mono);font-size:12px;line-height:1.7;overflow-x:auto;white-space:pre;border:1px solid var(--ink-1)}
+    .code-block .k{color:#18e299}
+    .code-block .s{color:#79c0ff}
+    .code-block .c{color:#717d79;font-style:italic}
+    .code-block .v{color:#ffa657}
+    .code-block .p{color:#d4fae8}
+
+    .back-bar{padding:6px 32px;background:rgba(254,253,251,0.85);border-bottom:1px solid var(--border);font-size:11.5px;display:flex;justify-content:space-between;align-items:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+    .back-bar a{color:var(--ink-3)}
+    .back-bar a:hover{color:var(--accent)}
+    .back-bar .tag-version{font-family:var(--font-mono);color:var(--ink-4)}
+  </style>
+</head>
+<body>
+<nav class="topnav">
+  <div class="brand">
+    <div class="brand-glyph">M</div>
+    MiniMax Docs
+  </div>
+  <div class="nav">
+    <span class="item">Guides</span>
+    <span class="item active">API reference</span>
+    <span class="item">Examples</span>
+    <span class="item">Changelog</span>
+    <span class="item">Community</span>
+    <span class="item">Pricing</span>
+  </div>
+  <div class="nav-actions">
+    <div class="search">
+      <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <span>Search docs…</span>
+      <span class="kbd">⌘K</span>
+    </div>
+    <button class="btn btn-ghost btn-sm">Sign in</button>
+    <button class="btn btn-dark btn-sm">Get started →</button>
+  </div>
+</nav>
+
+<div class="back-bar">
+  <a href="styles.html">← All styles</a>
+  <span class="tag-version">webapp-mintlify · v1</span>
+</div>
+
+<section class="hero">
+  <div class="hero-pill"><span class="dot"></span>v3.2 just shipped — async streaming, GPT-5 backend, TTS 2.8</div>
+  <h1>Ship <span class="hi">MiniMax</span> in five minutes.</h1>
+  <p>The complete API reference, integration guides, and worked examples for language, video, audio, and speech. Read-optimized, copy-paste-ready, keyboard-navigable.</p>
+  <div class="hero-ctas">
+    <button class="btn btn-dark">Get started →</button>
+    <button class="btn btn-ghost">Read the API</button>
+  </div>
+  <div class="hero-trust">
+    <span>Trusted by</span>
+    <span>OPENAI</span>
+    <span>VERCEL</span>
+    <span>LINEAR</span>
+    <span>RAILWAY</span>
+    <span>SUPABASE</span>
+    <span>POSTHOG</span>
+  </div>
+</section>
+
+<div class="content">
+  <div class="section">
+    <div class="section-head">
+      <div class="kicker">EVERYTHING YOU NEED</div>
+      <h2>One API, six model families, one bill.</h2>
+      <p>From text completions to voice synthesis to 4K video generation — the same auth, the same SDK, the same documentation surface.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+        <h3>Language</h3>
+        <p>Frontier code, chat, and tool-use models. 1M context window. Streaming, JSON mode, function calling.</p>
+        <a href="#" class="link">M3 quickstart →</a>
+      </div>
+      <div class="feature">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7zM14 5H3a2 2 0 00-2 2v10a2 2 0 002 2h11a2 2 0 002-2V7a2 2 0 00-2-2z"/></svg></div>
+        <h3>Video</h3>
+        <p>Text-to-video, image-to-video, and video-to-video at 1080p and 4K. Hailuo 2.6 with motion controls.</p>
+        <a href="#" class="link">Hailuo guide →</a>
+      </div>
+      <div class="feature">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13M9 18a3 3 0 11-6 0 3 3 0 016 0zM21 16a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
+        <h3>Audio</h3>
+        <p>Music 2.6 with full song generation, stems, and lyrics. Speech 2.8 with 47 voice presets and cloning.</p>
+        <a href="#" class="link">Music & speech →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="kicker">COPY, PASTE, SHIP</div>
+      <h2>The fastest path from API key to first request.</h2>
+      <p>Real examples in TypeScript, Python, Go, and cURL. Every block is tested in CI.</p>
+    </div>
+    <div class="code-split">
+      <div class="code-tabs">
+        <div class="code-tabs-head">
+          <div class="code-tabs-tabs">
+            <span class="code-tabs-tab ts active"><span class="ico"></span>TypeScript</span>
+            <span class="code-tabs-tab py"><span class="ico"></span>Python</span>
+            <span class="code-tabs-tab go"><span class="ico"></span>Go</span>
+            <span class="code-tabs-tab">cURL</span>
+          </div>
+          <div class="code-tabs-meta">POST /v1/chat</div>
+        </div>
+<div class="code-tabs-body"><span class="kw">import</span> { MiniMax } <span class="kw">from</span> <span class="str">"minimax"</span>;
+
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="ty">MiniMax</span>({
+  apiKey: process.env.<span class="fn">MINIMAX_API_KEY</span>,
+});
+
+<span class="kw">const</span> completion = <span class="kw">await</span> client.chat.completions.<span class="fn">create</span>({
+  model: <span class="str">"MiniMax-M3"</span>,
+  messages: [
+    { role: <span class="str">"system"</span>, content: <span class="str">"You are a precise code reviewer."</span> },
+    { role: <span class="str">"user"</span>,   content: code },
+  ],
+  stream: <span class="kw">true</span>,
+});
+
+<span class="kw">for await</span> (<span class="kw">const</span> chunk <span class="kw">of</span> completion) {
+  process.stdout.<span class="fn">write</span>(chunk.choices[<span class="num">0</span>]?.delta?.content ?? <span class="str">""</span>);
+}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="code-callout">
+          <div class="num">1</div>
+          <div>
+            <h3>Install the SDK</h3>
+            <p>One package, three runtimes. The SDK handles auth, retries, and streaming — you focus on the model call.</p>
+            <code>npm install minimax</code>
+          </div>
+        </div>
+        <div class="code-callout">
+          <div class="num">2</div>
+          <div>
+            <h3>Pass your API key</h3>
+            <p>Set it once as an env var. The SDK reads it on every call — no need to thread it through your codebase.</p>
+            <code>MINIMAX_API_KEY=mmx-…</code>
+          </div>
+        </div>
+        <div class="code-callout">
+          <div class="num">3</div>
+          <div>
+            <h3>Make your first request</h3>
+            <p>Pick a model, write a message, stream the response. The output is OpenAI-compatible, so existing tooling works.</p>
+            <code>await client.chat.completions.create(…)</code>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="logo-strip">
+    <div class="label">TRUSTED BY TEAMS SHIPPING IN PRODUCTION</div>
+    <div class="logos">
+      <span>Vercel</span>
+      <span class="t">Linear</span>
+      <span>Notion</span>
+      <span>Supabase</span>
+      <span class="t">Cursor</span>
+      <span>Raycast</span>
+      <span>Posthog</span>
+      <span class="t">Resend</span>
+    </div>
+  </div>
+
+  <div class="token-panel">
+    <h2>Skinning system — <strong>atmospheric green in 4 tokens</strong></h2>
+    <p style="color:var(--ink-2);font-size:14.5px;margin-bottom:20px;max-width:680px;line-height:1.55">Mintlify is the rare system where the canvas is NOT pure white — there's a micro-warmth in #fefdfb. The brand green is the entire identity, the atmospheric hero gradient is the signature, and ultra-round corners (16-24px) are the shape language. To rebrand this documentation site, change the 4 groups below.</p>
+
+    <div class="section-title">Surfaces — warm cream, NOT pure white</div>
+    <div class="token-grid">
+      <div class="tok"><div class="chip" style="background:#fefdfb"></div><div><div class="name">--bg</div><div class="val">#fefdfb · canvas</div></div></div>
+      <div class="tok"><div class="chip" style="background:#faf8f5"></div><div><div class="name">--bg-2</div><div class="val">#faf8f5 · panel</div></div></div>
+      <div class="tok"><div class="chip" style="background:#ebe9e6"></div><div><div class="name">--bg-3</div><div class="val">#ebe9e6 · tint</div></div></div>
+      <div class="tok"><div class="chip" style="background:rgba(0,0,0,0.05)"></div><div><div class="name">--border</div><div class="val">rgba 5% · subtle</div></div></div>
+    </div>
+
+    <div class="section-title">Ink — neutral, not black</div>
+    <div class="token-grid">
+      <div class="tok"><div class="chip" style="background:#121715"></div><div><div class="name">--ink-1</div><div class="val">#121715 · primary</div></div></div>
+      <div class="tok"><div class="chip" style="background:#485450"></div><div><div class="name">--ink-2</div><div class="val">#485450 · body</div></div></div>
+      <div class="tok"><div class="chip" style="background:#717d79"></div><div><div class="name">--ink-3</div><div class="val">#717d79 · muted</div></div></div>
+      <div class="tok"><div class="chip" style="background:#969e9b"></div><div><div class="name">--ink-4</div><div class="val">#969e9b · meta</div></div></div>
+    </div>
+
+    <div class="section-title">Brand — single green, two tones (light/dark)</div>
+    <div class="token-grid">
+      <div class="tok"><div class="chip" style="background:#0c8c5e;box-shadow:0 0 8px #0c8c5e"></div><div><div class="name">--accent</div><div class="val">#0c8c5e · light</div></div></div>
+      <div class="tok"><div class="chip" style="background:#18e299;box-shadow:0 0 8px #18e299"></div><div><div class="name">--accent-bg</div><div class="val">#18e299 · dark</div></div></div>
+      <div class="tok"><div class="chip" style="background:#d4fae8;border:1px solid #0c8c5e"></div><div><div class="name">--accent-light</div><div class="val">#d4fae8 · tint</div></div></div>
+    </div>
+
+    <div class="section-title">Skinning recipe</div>
+<div class="code-block"><span class="c">/* Skin this documentation site by changing 4 values.
+   The hero gradient is the signature — change bg2 → the
+   cloud re-colors to match your brand. */</span>
+<span class="k">:root</span> {
+  <span class="k">--bg</span>:        <span class="v">#fefdfb</span>;   <span class="c">/* warm cream, NOT pure white */</span>
+  <span class="k">--ink-1</span>:     <span class="v">#121715</span>;   <span class="c">/* near-black, not pure black */</span>
+  <span class="k">--accent</span>:    <span class="v">#0c8c5e</span>;   <span class="c">/* brand green — used sparingly */</span>
+  <span class="k">--font-sans</span>: <span class="s">"Inter"</span>, system-ui, sans-serif;
+}
+
+<span class="c">/* Result: every CTA, every link, every code block accent,
+   every badge picks up the new green. The atmospheric hero
+   gradient stays — only the green hue shifts. */</span></div>
+  </div>
+</div>
+
+<div class="cta-strip">
+  <h2>Ready to ship something people love?</h2>
+  <p>Free 30-day trial. $5 in credits on signup. No credit card required to explore the docs.</p>
+  <div class="btns">
+    <button class="btn btn-dark">Start free trial →</button>
+    <button class="btn btn-ghost">Talk to sales</button>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="brand"><div class="brand-glyph">M</div>MiniMax Docs</div>
+      <p>The complete reference for the MiniMax platform. Open-source on GitHub, hosted on our CDN.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Product</h4>
+      <a href="#">Language</a>
+      <a href="#">Video</a>
+      <a href="#">Audio</a>
+      <a href="#">Speech</a>
+    </div>
+    <div class="footer-col">
+      <h4>Developers</h4>
+      <a href="#">API reference</a>
+      <a href="#">SDKs</a>
+      <a href="#">Examples</a>
+      <a href="#">Changelog</a>
+    </div>
+    <div class="footer-col">
+      <h4>Company</h4>
+      <a href="#">About</a>
+      <a href="#">Pricing</a>
+      <a href="#">Status</a>
+      <a href="#">Contact</a>
+    </div>
+    <div class="footer-col">
+      <h4>Resources</h4>
+      <a href="#">Blog</a>
+      <a href="#">Research</a>
+      <a href="#">Trust</a>
+      <a href="#">Brand kit</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div>© 2026 MiniMax Inc. All rights reserved.</div>
+    <div>github.com/kajica2/minimax_style</div>
+  </div>
+</footer>
+</body>
+</html>

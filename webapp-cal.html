@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MiniMax App · Cal.com-style</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ----- Cal.com token set (rebranded for MiniMax) -----
+       Sources: getdesign.md/cal, designmd.co/d/cal, cal.com/blog
+       Principles applied:
+         - White canvas, near-black primary CTA (#111111)
+         - Single primary action per band, near-black (#111) CTAs
+         - #f5f5f5 surface card with real product UI inside
+         - Display via custom Cal Sans (DM Sans as substitute, lighter weight 600)
+         - Tabular numbers, generous whitespace, black CTAs
+         - One featured pricing card flips to dark (#111)
+         - Real product chrome (calendar widget) embedded in cards
+    ------------------------------------------------------------------- */
+    :root {
+      --bg: #ffffff;
+      --bg-2: #f5f5f5;
+      --bg-3: #ebebeb;
+      --bg-dark: #111111;
+      --surface: #ffffff;
+      --surface-2: #f5f5f5;
+      --surface-3: #ebebeb;
+      --surface-dark: #111111;
+      --ink-1: #111111;
+      --ink-2: #404040;
+      --ink-3: #6b7280;
+      --ink-4: #9ca3af;
+      --ink-on-dark: #ffffff;
+      --ink-on-dark-2: rgba(255,255,255,0.7);
+      --border: #e5e5e5;
+      --border-soft: #f0f0f0;
+      --border-strong: #d4d4d4;
+      --primary: #111111;
+      --primary-hover: #000000;
+      --accent-blue: #0070f3;
+      --accent-blue-soft: #e0f0ff;
+      --success: #16a34a;
+      --warn: #f59e0b;
+      --error: #dc2626;
+      --font-display: "DM Sans", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+      --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-xl: 16px; --r-pill: 8px;
+      --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-12: 48px; --s-16: 64px; --s-24: 96px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;background:var(--bg);color:var(--ink-1);font-family:var(--font-sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+    code,pre,.mono{font-family:var(--font-mono);font-size:13px}
+    a{color:inherit;text-decoration:none}
+    button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
+
+    /* === Top nav === */
+    .topnav{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:0 24px;height:64px;background:#fff;border-bottom:1px solid var(--border-soft);gap:32px}
+    .brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:600;font-size:18px;letter-spacing:-0.02em;color:var(--ink-1)}
+    .brand-glyph{width:30px;height:30px;background:var(--primary);border-radius:8px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px;font-family:var(--font-display)}
+    .nav{display:flex;align-items:center;gap:4px;justify-content:center}
+    .nav .item{padding:6px 12px;border-radius:8px;font-size:14px;font-weight:500;color:var(--ink-2);cursor:pointer;display:flex;align-items:center;gap:5px}
+    .nav .item:hover{background:var(--surface-2);color:var(--ink-1)}
+    .nav .item.active{color:var(--ink-1);font-weight:600}
+    .nav .item .new{font-size:9px;background:var(--primary);color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;vertical-align:middle}
+    .nav-actions{display:flex;align-items:center;gap:8px}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--r-pill);font-size:13.5px;font-weight:500;border:1px solid transparent;cursor:pointer;transition:all 0.12s ease;white-space:nowrap}
+    .btn-primary{background:var(--primary);color:#fff;font-weight:500}
+    .btn-primary:hover{background:#000}
+    .btn-ghost{background:transparent;color:var(--ink-1);border:1px solid var(--border-strong);border-radius:var(--r-pill)}
+    .btn-ghost:hover{background:var(--surface-2);border-color:var(--ink-3)}
+    .btn-sm{padding:6px 12px;font-size:12.5px}
+    .av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#404040,#111);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:600;cursor:pointer}
+
+    /* === Hero === */
+    .hero{padding:80px 24px 60px;text-align:center;background:linear-gradient(180deg,#fff 0%,#f5f5f5 100%)}
+    .hero-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--r-pill);font-size:11.5px;font-weight:500;color:var(--ink-2);margin-bottom:20px;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+    .hero-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--primary)}
+    .hero h1{font-family:var(--font-display);font-size:68px;font-weight:600;letter-spacing:-2px;line-height:1.05;margin:0 0 18px;color:var(--ink-1);max-width:780px;margin-left:auto;margin-right:auto}
+    .hero p{font-size:18px;font-weight:400;color:var(--ink-2);max-width:580px;margin:0 auto 28px;line-height:1.5}
+    .hero-ctas{display:flex;align-items:center;justify-content:center;gap:10px}
+    .hero-ctas .btn{padding:11px 20px;font-size:14px}
+
+    /* === Container === */
+    .container{max-width:1180px;margin:0 auto;padding:80px 24px}
+
+    /* === Section === */
+    .section{margin-bottom:80px}
+    .section-head{text-align:center;margin-bottom:40px;max-width:680px;margin-left:auto;margin-right:right}
+    .section-head .kicker{font-size:11px;text-transform:uppercase;letter-spacing:0.16em;color:var(--ink-3);font-weight:700;margin-bottom:8px}
+    .section-head h2{font-family:var(--font-display);font-size:42px;font-weight:600;letter-spacing:-1.5px;line-height:1.1;margin:0 0 12px;color:var(--ink-1)}
+    .section-head p{font-size:16px;color:var(--ink-2);line-height:1.55}
+
+    /* === Feature cards with embedded product UI === */
+    .feature-row{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-bottom:18px}
+    .feature-row.three{grid-template-columns:repeat(3,1fr)}
+    .feature-card{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--r-xl);padding:0;overflow:hidden;display:flex;flex-direction:column;transition:border-color 0.15s ease}
+    .feature-card:hover{border-color:var(--border)}
+    .feature-card .head{padding:24px 24px 14px}
+    .feature-card .head h3{font-family:var(--font-display);font-size:22px;font-weight:600;letter-spacing:-0.5px;margin:0 0 6px;color:var(--ink-1);line-height:1.2}
+    .feature-card .head p{font-size:14px;color:var(--ink-2);margin:0;line-height:1.5}
+    .feature-card .ui{background:#fff;margin:0 14px 14px;border-radius:10px;border:1px solid var(--border);overflow:hidden}
+    .feature-card .ui-pad{padding:14px 16px}
+    .feature-card .dark .head{background:#111;color:#fff}
+    .feature-card .dark .head h3,.feature-card .dark .head p{color:#fff}
+    .feature-card .dark .head p{color:rgba(255,255,255,0.7)}
+
+    /* === Calendar widget (embedded) === */
+    .cal-widget{padding:14px}
+    .cal-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--border-soft);margin-bottom:8px}
+    .cal-head .month{font-family:var(--font-display);font-weight:600;font-size:14px}
+    .cal-head .nav{display:flex;gap:2px}
+    .cal-head .nav .b{width:22px;height:22px;display:grid;place-items:center;border-radius:5px;color:var(--ink-3);font-size:11px;cursor:pointer}
+    .cal-head .nav .b:hover{background:var(--surface-2);color:var(--ink-1)}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:11.5px}
+    .cal-grid .dh{font-weight:600;color:var(--ink-3);font-size:10.5px;text-transform:uppercase;letter-spacing:0.05em;text-align:center;padding:4px 0}
+    .cal-grid .day{aspect-ratio:1;display:grid;place-items:center;border-radius:6px;color:var(--ink-2);cursor:pointer;font-weight:500}
+    .cal-grid .day:hover{background:var(--surface-2)}
+    .cal-grid .day.off{color:var(--ink-4)}
+    .cal-grid .day.sel{background:var(--primary);color:#fff;font-weight:600}
+    .cal-grid .day.has{box-shadow:inset 0 -2px 0 var(--primary)}
+    .cal-times{margin-top:10px;border-top:1px solid var(--border-soft);padding-top:10px}
+    .cal-times .slot{padding:6px 10px;background:var(--surface-2);border-radius:6px;font-size:12.5px;margin-bottom:4px;display:flex;justify-content:space-between;cursor:pointer}
+    .cal-times .slot:hover{background:var(--primary);color:#fff}
+    .cal-times .slot.avail{background:#e0f0ff;color:var(--accent-blue);font-weight:500}
+    .cal-times .slot.avail:hover{background:var(--accent-blue);color:#fff}
+
+    /* === Time picker widget === */
+    .picker{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px}
+    .picker .col h4{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);font-weight:600;margin:0 0 8px}
+    .picker .row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-soft);font-size:12.5px}
+    .picker .row:last-child{border-bottom:0}
+    .picker .row .k{color:var(--ink-2)}
+    .picker .row .v{color:var(--ink-1);font-weight:500;font-family:var(--font-mono);font-size:12px}
+
+    /* === Code/terminal mini === */
+    .terminal{background:#111;color:#d4d4d4;padding:14px 16px;font-family:var(--font-mono);font-size:12px;line-height:1.7;border-radius:8px;margin:0 14px 14px;overflow-x:auto}
+    .terminal .k{color:#a78bfa}
+    .terminal .s{color:#86efac}
+    .terminal .c{color:#6b7280}
+
+    /* === Pricing (3 tiers, featured card is dark) === */
+    .pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .price{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--r-xl);padding:28px;display:flex;flex-direction:column;gap:14px}
+    .price .name{font-family:var(--font-display);font-size:14px;font-weight:600;color:var(--ink-1)}
+    .price .price-val{font-family:var(--font-display);font-size:36px;font-weight:600;letter-spacing:-1px;color:var(--ink-1);line-height:1}
+    .price .price-val .unit{font-size:13px;font-weight:500;color:var(--ink-3);font-family:var(--font-sans)}
+    .price .desc{font-size:13px;color:var(--ink-2);line-height:1.5;margin-top:6px}
+    .price ul{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:6px}
+    .price ul li{font-size:13px;color:var(--ink-2);padding-left:18px;position:relative;line-height:1.4}
+    .price ul li::before{content:"✓";position:absolute;left:0;color:var(--success);font-weight:700}
+    .price .btn-primary{width:100%;justify-content:center}
+    .price.featured{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .price.featured .name{color:#fff}
+    .price.featured .price-val{color:#fff}
+    .price.featured .desc{color:rgba(255,255,255,0.7)}
+    .price.featured ul li{color:rgba(255,255,255,0.9)}
+    .price.featured ul li::before{color:#86efac}
+    .price.featured .btn-primary{background:#fff;color:var(--primary)}
+    .price.featured .btn-primary:hover{background:#f5f5f5}
+
+    /* === Logos === */
+    .logos{display:flex;align-items:center;justify-content:space-around;flex-wrap:wrap;gap:24px;padding:40px 0;border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft);opacity:0.6}
+    .logos span{font-weight:700;font-size:14px;color:var(--ink-2);letter-spacing:-0.005em;font-family:var(--font-sans)}
+
+    /* === CTA strip === */
+    .cta-strip{margin:0 24px 80px;padding:56px 64px;background:var(--primary);border-radius:var(--r-xl);text-align:center;color:#fff;position:relative;overflow:hidden}
+    .cta-strip::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 100% 50%,rgba(255,255,255,0.05),transparent 70%);pointer-events:none}
+    .cta-strip h2{font-family:var(--font-display);font-size:36px;font-weight:600;letter-spacing:-1px;margin:0 0 10px;line-height:1.1;position:relative}
+    .cta-strip p{font-size:15px;opacity:0.7;margin:0 0 22px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.5;position:relative}
+    .cta-strip .btns{display:flex;align-items:center;justify-content:center;gap:8px;position:relative}
+
+    /* === Token panel === */
+    .token-panel{margin:0 24px 80px;padding:32px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-xl);max-width:1180px;margin-left:auto;margin-right:auto}
+    .token-panel h2{font-family:var(--font-display);font-size:26px;font-weight:600;letter-spacing:-0.5px;margin:0 0 6px}
+    .token-panel h2 strong{font-weight:600}
+    .token-panel .sub{color:var(--ink-2);font-size:14.5px;margin-bottom:20px;max-width:680px;line-height:1.55}
+    .section-title{font-size:10.5px;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink-3);font-weight:700;margin:16px 0 8px}
+    .token-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-bottom:10px}
+    .tok{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:9px}
+    .tok .chip{width:26px;height:26px;border-radius:5px;border:1px solid var(--border);flex-shrink:0}
+    .tok .name{font-family:var(--font-mono);font-size:11px;color:var(--ink-1);font-weight:500}
+    .tok .val{font-family:var(--font-mono);font-size:10px;color:var(--ink-3);margin-top:2px}
+    .code-block{background:var(--primary);color:#d4d4d4;border-radius:var(--r-xl);padding:18px 20px;font-family:var(--font-mono);font-size:12px;line-height:1.7;overflow-x:auto;white-space:pre}
+    .code-block .k{color:#86efac}
+    .code-block .s{color:#79c0ff}
+    .code-block .c{color:#6b7280;font-style:italic}
+    .code-block .v{color:#ffa657}
+
+    .back-bar{padding:6px 24px;background:#f5f5f5;border-bottom:1px solid var(--border-soft);font-size:11.5px;display:flex;justify-content:space-between;align-items:center}
+    .back-bar a{color:var(--ink-3)}
+    .back-bar a:hover{color:var(--primary)}
+    .back-bar .tag-version{font-family:var(--font-mono);color:var(--ink-4)}
+  </style>
+</head>
+<body>
+<nav class="topnav">
+  <div class="brand">
+    <div class="brand-glyph">M</div>
+    MiniMax Schedule
+  </div>
+  <div class="nav">
+    <span class="item">Individuals</span>
+    <span class="item">Teams</span>
+    <span class="item">Enterprise</span>
+    <span class="item">Integrations <span class="new">New</span></span>
+    <span class="item active">Pricing</span>
+    <span class="item">Download</span>
+  </div>
+  <div class="nav-actions">
+    <button class="btn btn-ghost btn-sm">Sign in</button>
+    <button class="btn btn-primary btn-sm">Get started — free</button>
+    <span class="av" title="Kai">K</span>
+  </div>
+</nav>
+
+<div class="back-bar">
+  <a href="styles.html">← All styles</a>
+  <span class="tag-version">webapp-cal · v1</span>
+</div>
+
+<section class="hero">
+  <div class="hero-pill"><span class="dot"></span>v6.6 just shipped — coss.com/ui, redesigned across every surface</div>
+  <h1>The better way to schedule your meetings.</h1>
+  <p>Open-source scheduling that works for individuals, teams, and enterprises. Self-host or use the cloud. Your data, your control.</p>
+  <div class="hero-ctas">
+    <button class="btn btn-primary">Get started — free</button>
+    <button class="btn btn-ghost">Talk to sales</button>
+  </div>
+</section>
+
+<div class="container">
+
+  <!-- === Schedule a meeting — with the real product UI === -->
+  <div class="section">
+    <div class="section-head" style="text-align:left;max-width:none;margin:0 0 32px">
+      <div class="kicker">BUILT-IN PRODUCT CHROME</div>
+      <h2>Real interfaces, in your landing page.</h2>
+      <p>Show, don't tell. Every Cal.com card embeds a real product widget — calendar pickers, time slots, form controls. Visitors see exactly what they're signing up for.</p>
+    </div>
+
+    <div class="feature-row">
+      <div class="feature-card">
+        <div class="head">
+          <h3>Schedule a 30-min call</h3>
+          <p>Embed a real calendar widget. Available times, timezone detection, and one-click booking — all in the card.</p>
+        </div>
+        <div class="ui">
+          <div class="cal-widget">
+            <div class="cal-head">
+              <div class="month">September 2026</div>
+              <div class="nav">
+                <span class="b">‹</span>
+                <span class="b">›</span>
+              </div>
+            </div>
+            <div class="cal-grid">
+              <span class="dh">M</span><span class="dh">T</span><span class="dh">W</span><span class="dh">T</span><span class="dh">F</span><span class="dh">S</span><span class="dh">S</span>
+              <span class="day off">25</span><span class="day off">26</span><span class="day off">27</span><span class="day off">28</span><span class="day off">29</span><span class="day off">30</span><span class="day off">31</span>
+              <span class="day">1</span><span class="day">2</span><span class="day">3</span><span class="day">4</span><span class="day">5</span><span class="day off">6</span><span class="day off">7</span>
+              <span class="day">8</span><span class="day">9</span><span class="day has">10</span><span class="day">11</span><span class="day">12</span><span class="day off">13</span><span class="day off">14</span>
+              <span class="day">15</span><span class="day has">16</span><span class="day">17</span><span class="day">18</span><span class="day has">19</span><span class="day off">20</span><span class="day off">21</span>
+              <span class="day">22</span><span class="day">23</span><span class="day has">24</span><span class="day sel">25</span><span class="day has">26</span><span class="day off">27</span><span class="day off">28</span>
+              <span class="day">29</span><span class="day">30</span><span class="day off">1</span><span class="day off">2</span><span class="day off">3</span><span class="day off">4</span><span class="day off">5</span>
+            </div>
+            <div class="cal-times">
+              <div class="slot avail">09:00 <span>30 min</span></div>
+              <div class="slot avail">10:30 <span>30 min</span></div>
+              <div class="slot avail">14:00 <span>30 min</span></div>
+              <div class="slot">15:30 <span>30 min</span></div>
+              <div class="slot">16:00 <span>30 min</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="head">
+          <h3>Configure once, share forever</h3>
+          <p>Set your availability, buffer times, and booking questions once. Share a single link that respects everyone's preferences.</p>
+        </div>
+        <div class="ui">
+          <div class="picker">
+            <div class="col">
+              <h4>Working hours</h4>
+              <div class="row"><span class="k">Monday</span><span class="v">9:00 – 17:00</span></div>
+              <div class="row"><span class="k">Tuesday</span><span class="v">9:00 – 17:00</span></div>
+              <div class="row"><span class="k">Wednesday</span><span class="v">9:00 – 17:00</span></div>
+              <div class="row"><span class="k">Thursday</span><span class="v">9:00 – 17:00</span></div>
+              <div class="row"><span class="k">Friday</span><span class="v">9:00 – 14:00</span></div>
+            </div>
+            <div class="col">
+              <h4>Booking rules</h4>
+              <div class="row"><span class="k">Buffer before</span><span class="v">15 min</span></div>
+              <div class="row"><span class="k">Buffer after</span><span class="v">15 min</span></div>
+              <div class="row"><span class="k">Min notice</span><span class="v">4 hours</span></div>
+              <div class="row"><span class="k">Max advance</span><span class="v">60 days</span></div>
+              <div class="row"><span class="k">Slot interval</span><span class="v">30 min</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-row three">
+      <div class="feature-card">
+        <div class="head">
+          <h3>CLI first</h3>
+          <p>Book, cancel, and reschedule from your terminal. Pipe calendar output into scripts.</p>
+        </div>
+<div class="terminal"><span class="c">$</span> minimax book <span class="k">--with</span> kai@minimax.io <span class="k">--at</span> 14:00
+<span class="c">✓</span> <span class="s">Slot reserved: 2026-09-12 14:00 CEST</span>
+<span class="c">✓</span> <span class="s">Invite sent to kai@minimax.io</span>
+<span class="c">✓</span> <span class="s">Calendar event created (cal_2410a)</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="head">
+          <h3>Built-in routing</h3>
+          <p>Route incoming bookings to the right person. Round-robin, collective, or weighted — your rules.</p>
+        </div>
+        <div class="ui">
+          <div class="cal-widget" style="padding:18px 20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <h4 style="font-size:14px;font-weight:600;margin:0">Sales calls</h4>
+              <span style="font-size:11px;background:var(--accent-blue-soft);color:var(--accent-blue);padding:2px 7px;border-radius:10px;font-weight:600">Round-robin</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface-2);border-radius:6px;margin-bottom:6px;font-size:12.5px">
+              <span style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#0070f3,#005ad1);color:#fff;display:inline-grid;place-items:center;font-size:10px;font-weight:600;flex-shrink:0">K</span>
+              <span style="flex:1">Kai Djuric</span>
+              <span style="font-family:var(--font-mono);color:var(--ink-3);font-size:11px">next</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface-2);border-radius:6px;margin-bottom:6px;font-size:12.5px">
+              <span style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#0a7a3a);color:#fff;display:inline-grid;place-items:center;font-size:10px;font-weight:600;flex-shrink:0">M</span>
+              <span style="flex:1">Mira Quan</span>
+              <span style="font-family:var(--font-mono);color:var(--ink-3);font-size:11px">+1</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12.5px">
+              <span style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#d97706,#a85800);color:#fff;display:inline-grid;place-items:center;font-size:10px;font-weight:600;flex-shrink:0">O</span>
+              <span style="flex:1">Owen Park</span>
+              <span style="font-family:var(--font-mono);color:var(--ink-3);font-size:11px">+2</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="feature-card dark">
+        <div class="head">
+          <h3>Self-host or cloud</h3>
+          <p>Y Combinator-backed open source. Apache 2.0. Self-host on your infrastructure or use our managed cloud.</p>
+        </div>
+        <div class="ui" style="background:#000;border-color:#000">
+          <div class="terminal" style="background:transparent;margin:0;padding:0;color:#d4d4d4">
+<span class="c"># Self-host with Docker</span>
+<span class="k">git clone</span> github.com/kajica2/minimax-schedule
+<span class="k">cd</span> minimax-schedule
+<span class="k">docker compose</span> up -d
+<span class="c"># Running on http://localhost:3000</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === Logos === -->
+  <div class="logos">
+    <span>Vercel</span>
+    <span style="font-family:var(--font-display);font-weight:500">Linear</span>
+    <span>Notion</span>
+    <span>Supabase</span>
+    <span>Stripe</span>
+    <span style="font-family:var(--font-display);font-weight:500">Raycast</span>
+    <span>Anthropic</span>
+  </div>
+
+  <!-- === Pricing (3 tiers, featured dark) === -->
+  <div class="section" style="margin-top:80px">
+    <div class="section-head">
+      <div class="kicker">PRICING</div>
+      <h2>Free for individuals. Scales with you.</h2>
+      <p>Start free. Upgrade when you need team routing, advanced integrations, or white-label booking pages.</p>
+    </div>
+    <div class="pricing">
+      <div class="price">
+        <div class="name">Free</div>
+        <div class="price-val">$0 <span class="unit">/ month</span></div>
+        <div class="desc">For individuals who just need a booking page.</div>
+        <ul>
+          <li>1 calendar connection</li>
+          <li>Unlimited bookings</li>
+          <li>Email reminders</li>
+          <li>Community support</li>
+        </ul>
+        <button class="btn btn-ghost">Get started</button>
+      </div>
+      <div class="price featured">
+        <div class="name">Teams</div>
+        <div class="price-val">$15 <span class="unit">/ user / month</span></div>
+        <div class="desc">For growing teams that need routing and analytics.</div>
+        <ul>
+          <li>Round-robin + collective routing</li>
+          <li>Team analytics dashboard</li>
+          <li>CRM integrations (HubSpot, Salesforce)</li>
+          <li>Workflows + webhooks</li>
+          <li>Priority email support</li>
+        </ul>
+        <button class="btn btn-primary">Start 14-day trial</button>
+      </div>
+      <div class="price">
+        <div class="name">Enterprise</div>
+        <div class="price-val">Custom</div>
+        <div class="desc">For organizations with compliance, SSO, and scale needs.</div>
+        <ul>
+          <li>SAML SSO + SCIM provisioning</li>
+          <li>Self-hosted or VPC peering</li>
+          <li>SOC 2 Type II + HIPAA</li>
+          <li>99.99% uptime SLA</li>
+          <li>Dedicated success engineer</li>
+        </ul>
+        <button class="btn btn-ghost">Talk to sales</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- === Token panel === -->
+  <div class="token-panel">
+    <h2>Skinning system — <strong>white + black, the Cal way</strong></h2>
+    <p style="color:var(--ink-2);font-size:14.5px;margin-bottom:20px;max-width:680px;line-height:1.55">Cal.com's design discipline is restraint. White canvas, near-black primary CTA, light-gray surface cards. The featured pricing card flips to dark — the only dark card on light pages. To rebrand this scheduling app, change the 4 groups below. The single primary CTA per band is the rule.</p>
+
+    <div class="section-title">Surfaces — white + one light gray</div>
+    <div class="token-grid">
+      <div class="tok"><div class="chip" style="background:#ffffff;border:1px solid #e5e5e5"></div><div><div class="name">--bg</div><div class="val">#ffffff · canvas</div></div></div>
+      <div class="tok"><div class="chip" style="background:#f5f5f5"></div><div><div class="name">--surface-2</div><div class="val">#f5f5f5 · card</div></div></div>
+      <div class="tok"><div class="chip" style="background:#ebebeb"></div><div><div class="name">--surface-3</div><div class="val">#ebebeb · inset</div></div></div>
+      <div class="tok"><div class="chip" style="background:#111111"></div><div><div class="name">--primary</div><div class="val">#111111 · CTA</div></div></div>
+    </div>
+
+    <div class="section-title">Ink — near-black, not pure black</div>
+    <div class="token-grid">
+      <div class="tok"><div class="chip" style="background:#111111"></div><div><div class="name">--ink-1</div><div class="val">#111111 · display</div></div></div>
+      <div class="tok"><div class="chip" style="background:#404040"></div><div><div class="name">--ink-2</div><div class="val">#404040 · body</div></div></div>
+      <div class="tok"><div class="chip" style="background:#6b7280"></div><div><div class="name">--ink-3</div><div class="val">#6b7280 · muted</div></div></div>
+      <div class="tok"><div class="chip" style="background:#9ca3af"></div><div><div class="name">--ink-4</div><div class="val">#9ca3af · meta</div></div></div>
+    </div>
+
+    <div class="section-title">Brand — the dark CTA IS the brand</div>
+    <div class="token-grid">
+      <div class="tok"><div class="chip" style="background:#111111"></div><div><div class="name">--primary</div><div class="val">#111111 · CTA</div></div></div>
+      <div class="tok"><div class="chip" style="background:#0070f3"></div><div><div class="name">--accent-blue</div><div class="val">#0070f3 · link</div></div></div>
+      <div class="tok"><div class="chip" style="background:#16a34a"></div><div><div class="name">--success</div><div class="val">#16a34a · ✓</div></div></div>
+    </div>
+
+    <div class="section-title">Skinning recipe</div>
+<div class="code-block"><span class="c">/* Skin this scheduling app by changing 4 values.
+   The dark CTA is the brand identity. No gradients. */</span>
+<span class="k">:root</span> {
+  <span class="k">--bg</span>:        <span class="v">#ffffff</span>;   <span class="c">/* canvas */</span>
+  <span class="k">--surface-2</span>: <span class="v">#f5f5f5</span>;   <span class="c">/* card surfaces */</span>
+  <span class="k">--ink-1</span>:     <span class="v">#111111</span>;   <span class="c">/* display + primary CTA */</span>
+  <span class="k">--font-display</span>: <span class="s">"DM Sans"</span>, <span class="s">"Cal Sans"</span>, sans-serif;
+}
+
+<span class="c">/* Result: every primary button goes dark, every featured
+   pricing card flips to dark, every terminal block goes dark,
+   every display headline re-weights. White stays white. */</span></div>
+  </div>
+</div>
+
+<div class="cta-strip">
+  <h2>Your time, finally on your terms.</h2>
+  <p>Join 1.2M people who schedule with MiniMax. Free for individuals, $15/user for teams, custom for enterprise.</p>
+  <div class="btns">
+    <button class="btn btn-primary" style="background:#fff;color:#111">Get started — free →</button>
+    <button class="btn btn-ghost" style="background:transparent;border-color:rgba(255,255,255,0.3);color:#fff">Talk to sales</button>
+  </div>
+</div>
+</body>
+</html>
