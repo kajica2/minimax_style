@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MiniMax App · Vercel-style</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ----- Vercel Geist token set (rebranded for MiniMax) -----
+       Sources: vercel.com/geist, designsystems.one/vercel-geist, shadcn.io/design/vercel
+       Principles applied:
+         - True black on true white. Not pure #000 on dark-mode — both modes use ink #000 on bg #fff
+         - Geist Sans as primary (Inter on Google Fonts is documented substitute)
+         - Geist Mono for code/logs/numerics (tabular numerics across the system)
+         - One electric blue accent (#0070f3), used like punctuation
+         - Restrained: shadows only on overlays, never on cards
+         - 6/8/12 radius ladder. Pill for primary actions.
+         - 150ms ease motion default
+    ------------------------------------------------------------------- */
+    :root {
+      --bg: #ffffff;
+      --bg-2: #fafafa;
+      --bg-3: #f5f5f5;
+      --surface: #ffffff;
+      --surface-2: #fafafa;
+      --surface-hover: #f5f5f5;
+      --ink-1: #000000;
+      --ink-2: #404040;
+      --ink-3: #707070;
+      --ink-4: #a3a3a3;
+      --border: #eaeaea;
+      --border-strong: #d4d4d4;
+      --accent: #0070f3;
+      --accent-hover: #005ad1;
+      --accent-soft: #e0f0ff;
+      --success: #0070f3;       /* Vercel reuses blue for success states */
+      --warn: #f5a623;
+      --error: #ee0000;
+      --violet: #7928ca;        /* launch-day gradient anchor only */
+      --font-sans: "Geist", "Inter", -apple-system, "Segoe UI", sans-serif;
+      --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
+      --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --r-pill: 9999px;
+      --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;background:var(--bg);color:var(--ink-1);font-family:var(--font-sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1,"cv11" 1}
+    code,pre,.mono{font-family:var(--font-mono);font-size:12.5px}
+    a{color:inherit;text-decoration:none}
+    button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
+    .num{font-variant-numeric:tabular-nums}
+
+    /* === Shell: thin top bar + side rail + main === */
+    .app{display:grid;grid-template-rows:auto 1fr;height:100vh;background:var(--bg)}
+    .topnav{display:grid;grid-template-columns:auto 1fr auto;align-items:center;height:52px;padding:0 16px;border-bottom:1px solid var(--border);background:var(--bg);gap:18px}
+    .brand{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:var(--r-md);font-weight:600;font-size:14px;letter-spacing:-0.01em;color:var(--ink-1)}
+    .brand:hover{background:var(--surface-2)}
+    .brand .glyph{width:20px;height:20px;background:var(--ink-1);border-radius:5px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px}
+    .scope-select{display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-md);font-size:12.5px;font-weight:500;color:var(--ink-1);cursor:pointer}
+    .scope-select:hover{border-color:var(--border-strong)}
+    .scope-select .av{width:16px;height:16px;border-radius:4px;background:#000;color:#fff;display:grid;place-items:center;font-size:9px;font-weight:700}
+    .scope-select .caret{color:var(--ink-3);font-size:9px;margin-left:2px}
+    .topnav-center{display:flex;align-items:center;gap:4px;font-size:12.5px;color:var(--ink-3)}
+    .topnav-center .crumb{color:var(--ink-2)}
+    .topnav-center .crumb.current{color:var(--ink-1);font-weight:500}
+    .topnav-center .sep{margin:0 4px;color:var(--ink-4)}
+    .topnav-actions{display:flex;align-items:center;gap:6px}
+    .cmd-k{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-md);color:var(--ink-3);font-size:12px;min-width:220px;cursor:pointer}
+    .cmd-k:hover{border-color:var(--border-strong);background:var(--bg)}
+    .cmd-k .ico{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.6}
+    .cmd-k .kbd{margin-left:auto;font-family:var(--font-mono);font-size:10.5px;background:var(--bg);border:1px solid var(--border);padding:1px 5px;border-radius:3px;color:var(--ink-3)}
+    .icon-btn{width:30px;height:30px;display:grid;place-items:center;border-radius:var(--r-md);color:var(--ink-2);cursor:pointer}
+    .icon-btn:hover{background:var(--surface-2);color:var(--ink-1)}
+    .avatar-btn{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0070f3,#7928ca);display:grid;place-items:center;color:#fff;font-size:11px;font-weight:600;cursor:pointer}
+
+    .body{display:grid;grid-template-columns:200px 1fr;height:calc(100vh - 52px);overflow:hidden}
+    .sidebar{border-right:1px solid var(--border);padding:12px 8px;overflow-y:auto;background:var(--bg)}
+    .side-group{margin-bottom:12px}
+    .side-label{font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-3);font-weight:600;padding:6px 10px 4px;display:flex;align-items:center;justify-content:space-between}
+    .side-label .add{color:var(--ink-4);cursor:pointer;font-size:14px;line-height:1}
+    .side-item{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:var(--r-md);color:var(--ink-2);font-size:13px;cursor:pointer;font-weight:400}
+    .side-item:hover{background:var(--surface-2);color:var(--ink-1)}
+    .side-item.active{background:var(--surface-2);color:var(--ink-1);font-weight:500}
+    .side-item .ico{width:14px;height:14px;color:var(--ink-3);stroke:currentColor;fill:none;stroke-width:1.6}
+    .side-item.active .ico{color:var(--ink-1)}
+    .side-item .badge{margin-left:auto;font-size:10.5px;color:var(--ink-3);background:var(--bg-3);padding:1px 6px;border-radius:var(--r-pill);font-weight:500}
+    .side-item .dot{width:8px;height:8px;border-radius:50%;margin-left:auto}
+
+    /* === Main content === */
+    .main{overflow-y:auto;background:var(--bg)}
+    .page-head{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border);gap:24px}
+    .page-head h1{font-size:20px;font-weight:600;letter-spacing:-0.01em;line-height:1.2;margin:0}
+    .page-head .sub{font-size:13px;color:var(--ink-3);margin-top:3px}
+    .head-actions{display:flex;align-items:center;gap:8px}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r-md);font-size:12.5px;font-weight:500;border:1px solid transparent;cursor:pointer;transition:all 0.12s ease;white-space:nowrap}
+    .btn-primary{background:var(--ink-1);color:#fff}
+    .btn-primary:hover{background:#1a1a1a}
+    .btn-ghost{background:#fff;color:var(--ink-1);border-color:var(--border)}
+    .btn-ghost:hover{background:var(--surface-2);border-color:var(--border-strong)}
+    .btn-accent{background:var(--accent);color:#fff}
+    .btn-accent:hover{background:var(--accent-hover)}
+    .btn-sm{padding:4px 9px;font-size:12px}
+
+    /* === Stat cards (Vercel: minimal, no shadow) === */
+    .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--border)}
+    .stat{padding:16px 24px;border-right:1px solid var(--border)}
+    .stat:last-child{border-right:0}
+    .stat .label{font-size:12px;color:var(--ink-3);font-weight:500;display:flex;align-items:center;gap:6px;margin-bottom:6px}
+    .stat .value{font-size:24px;font-weight:600;letter-spacing:-0.018em;color:var(--ink-1);font-variant-numeric:tabular-nums;line-height:1.1;display:flex;align-items:baseline;gap:3px}
+    .stat .value .unit{font-size:13px;font-weight:400;color:var(--ink-3)}
+    .stat .delta{font-size:11.5px;font-weight:500;margin-top:4px;display:flex;align-items:center;gap:3px}
+    .delta-up{color:var(--success)}
+    .delta-down{color:var(--error)}
+
+    /* === Environment pill + segmented control === */
+    .seg{display:inline-flex;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-md);padding:2px;gap:1px}
+    .seg .opt{padding:4px 11px;font-size:12px;border-radius:5px;color:var(--ink-2);cursor:pointer;font-weight:500}
+    .seg .opt:hover{color:var(--ink-1)}
+    .seg .opt.active{background:var(--bg);color:var(--ink-1);box-shadow:0 0 0 1px var(--border)}
+
+    .env-pill{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-pill);font-size:11.5px;font-weight:500;color:var(--ink-1)}
+    .env-pill .dot{width:6px;height:6px;border-radius:50%;background:#000}
+
+    /* === Deployments table === */
+    .panel{background:var(--bg);border-bottom:1px solid var(--border)}
+    .panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid var(--border);gap:12px}
+    .panel-head h2{font-size:14px;font-weight:600;color:var(--ink-1);letter-spacing:-0.005em}
+    .panel-head .meta{font-size:12px;color:var(--ink-3)}
+    .table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+    .table th{font-size:11.5px;text-transform:none;letter-spacing:0;color:var(--ink-3);font-weight:500;text-align:left;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--bg-2);height:32px}
+    .table td{padding:10px 16px;border-bottom:1px solid var(--border);color:var(--ink-1);vertical-align:middle}
+    .table tr:last-child td{border-bottom:0}
+    .table tr:hover td{background:var(--bg-2)}
+    .td-mono{font-family:var(--font-mono);font-size:12px}
+    .status{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:var(--r-pill);font-size:11.5px;font-weight:500;font-family:var(--font-mono)}
+    .status .dot{width:6px;height:6px;border-radius:50%}
+    .s-ready{background:#e6f4ff;color:#005ad1}.s-ready .dot{background:#0070f3}
+    .s-building{background:#fff8e1;color:#7a5c00}.s-building .dot{background:#f5a623;animation:pulse 1.4s ease-in-out infinite}
+    .s-queued{background:var(--bg-3);color:var(--ink-2)}.s-queued .dot{background:var(--ink-3)}
+    .s-error{background:#fdebe9;color:#9a1d16}.s-error .dot{background:#ee0000}
+    .s-canceled{background:var(--bg-3);color:var(--ink-4)}.s-canceled .dot{background:var(--ink-4)}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+    .branch{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:12px;color:var(--ink-2)}
+    .branch .ico{color:var(--ink-3)}
+    .commit{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-1)}
+    .commit .msg{color:var(--ink-1);font-weight:500}
+    .commit .hash{font-family:var(--font-mono);font-size:11.5px;color:var(--accent);font-weight:500}
+    .author{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2)}
+    .author .av{width:20px;height:20px;border-radius:50%;background:var(--bg-3);display:grid;place-items:center;font-size:10px;font-weight:600;color:var(--ink-1)}
+    .duration{font-family:var(--font-mono);font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+
+    /* === Build log preview (mono) === */
+    .log-panel{margin:24px;background:var(--ink-1);color:#ededed;border-radius:var(--r-md);overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.12)}
+    .log-head{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #1f1f1f}
+    .log-head .dots{display:flex;gap:6px}
+    .log-head .dots span{width:10px;height:10px;border-radius:50%}
+    .log-head .dots span:nth-child(1){background:#ff5f57}
+    .log-head .dots span:nth-child(2){background:#febc2e}
+    .log-head .dots span:nth-child(3){background:#28c840}
+    .log-head .title{font-family:var(--font-mono);font-size:11.5px;color:#888}
+    .log-body{padding:14px 18px;font-family:var(--font-mono);font-size:12px;line-height:1.7;color:#d4d4d4;max-height:240px;overflow:hidden}
+    .log-body .prompt{color:#666}
+    .log-body .ok{color:#4ade80}
+    .log-body .info{color:#60a5fa}
+    .log-body .warn{color:#fbbf24}
+    .log-body .err{color:#f87171}
+    .log-body .hi{color:#fff;font-weight:500}
+
+    /* === Token panel === */
+    .token-panel{margin:32px 24px;padding:32px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg)}
+    .token-panel h2{font-size:24px;font-weight:600;letter-spacing:-0.018em;margin:0 0 6px}
+    .token-panel h2 strong{font-weight:700}
+    .token-panel .sub{color:var(--ink-2);font-size:14px;margin-bottom:24px;max-width:680px;line-height:1.55}
+    .section-title{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);font-weight:600;margin:18px 0 10px}
+    .token-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:14px}
+    .tok{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;display:flex;align-items:center;gap:10px}
+    .tok .chip{width:30px;height:30px;border-radius:5px;border:1px solid var(--border);flex-shrink:0}
+    .tok .name{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-1);font-weight:500}
+    .tok .val{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);margin-top:2px}
+    .code-block{background:var(--ink-1);color:#d4d4d4;border-radius:var(--r-md);padding:18px 20px;font-family:var(--font-mono);font-size:12px;line-height:1.7;overflow-x:auto;white-space:pre;border:1px solid #1a1a1a}
+    .code-block .k{color:#79c0ff}
+    .code-block .s{color:#a5d6ff}
+    .code-block .c{color:#6b7280;font-style:italic}
+    .code-block .v{color:#ffa657}
+
+    .back-bar{padding:8px 16px;background:var(--bg-2);border-bottom:1px solid var(--border);font-size:11.5px;display:flex;justify-content:space-between;align-items:center}
+    .back-bar a{color:var(--ink-3)}
+    .back-bar a:hover{color:var(--accent)}
+    .back-bar .tag-version{font-family:var(--font-mono);color:var(--ink-4)}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topnav">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div class="brand"><span class="glyph">M</span>MiniMax</div>
+      <div class="scope-select"><span class="av">M</span> Kai's projects <span class="caret">▾</span></div>
+    </div>
+    <div class="topnav-center">
+      <span class="crumb">Projects</span>
+      <span class="sep">/</span>
+      <span class="crumb">minimax-platform</span>
+      <span class="sep">/</span>
+      <span class="crumb current">Deployments</span>
+    </div>
+    <div class="topnav-actions">
+      <div class="cmd-k">
+        <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span>Search deployments, docs…</span>
+        <span class="kbd">⌘K</span>
+      </div>
+      <div class="icon-btn" title="Notifications">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg>
+      </div>
+      <span class="avatar-btn" title="Kai">K</span>
+    </div>
+  </header>
+
+  <div class="body">
+    <aside class="sidebar">
+      <div class="side-group">
+        <div class="side-label">Project</div>
+        <div class="side-item active">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
+          Overview
+        </div>
+        <div class="side-item">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          Deployments
+          <span class="badge">42</span>
+        </div>
+        <div class="side-item">
+          <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>
+          Observability
+        </div>
+        <div class="side-item">
+          <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          Logs
+        </div>
+        <div class="side-item">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M12 2v20M2 12h20"/></svg>
+          Functions
+        </div>
+      </div>
+
+      <div class="side-group">
+        <div class="side-label">Manage <span class="add">+</span></div>
+        <div class="side-item">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M3 12h18M12 3a15 15 0 010 18"/></svg>
+          Domains
+        </div>
+        <div class="side-item">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M19 11H5a2 2 0 00-2 2v6a2 2 0 002 2h14a2 2 0 002-2v-6a2 2 0 00-2-2zM7 11V7a5 5 0 0110 0v4"/></svg>
+          Environment Variables
+        </div>
+        <div class="side-item">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M12 2l2.4 5 5.6.8-4 3.9 1 5.6L12 14.8 6.9 17.3l1-5.6-4-3.9 5.6-.8z"/></svg>
+          Integrations
+        </div>
+        <div class="side-item">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10"/></svg>
+          Git
+        </div>
+      </div>
+
+      <div class="side-group">
+        <div class="side-label">Recent</div>
+        <div class="side-item"><span class="dot" style="background:#0070f3"></span>minimax-platform</div>
+        <div class="side-item"><span class="dot" style="background:#7928ca"></span>minimax-docs</div>
+        <div class="side-item"><span class="dot" style="background:#16a34a"></span>minimax-api</div>
+        <div class="side-item"><span class="dot" style="background:#f5a623"></span>landing-page</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="back-bar">
+        <a href="styles.html">← All styles</a>
+        <span class="tag-version">webapp-vercel · v1</span>
+      </div>
+
+      <div class="page-head">
+        <div>
+          <h1>Deployments</h1>
+          <div class="sub">minimax-platform · production · 42 deployments in last 30 days · 100% success rate</div>
+        </div>
+        <div class="head-actions">
+          <span class="env-pill"><span class="dot"></span>production</span>
+          <div class="seg">
+            <span class="opt active">All</span>
+            <span class="opt">Production</span>
+            <span class="opt">Preview</span>
+          </div>
+          <button class="btn btn-ghost">View logs</button>
+          <button class="btn btn-primary">Deploy →</button>
+        </div>
+      </div>
+
+      <!-- Stat strip (Vercel: no shadow, separated by lines) -->
+      <div class="stat-row">
+        <div class="stat">
+          <div class="label">Builds today</div>
+          <div class="value num">14</div>
+          <div class="delta delta-up">▲ 4 vs yesterday</div>
+        </div>
+        <div class="stat">
+          <div class="label">Median build time</div>
+          <div class="value num">38<span class="unit">s</span></div>
+          <div class="delta delta-down">▼ 4s improvement</div>
+        </div>
+        <div class="stat">
+          <div class="label">Success rate</div>
+          <div class="value num">100<span class="unit">%</span></div>
+          <div class="delta">last 30d</div>
+        </div>
+        <div class="stat">
+          <div class="label">Edge requests</div>
+          <div class="value num">2.4<span class="unit">M</span></div>
+          <div class="delta delta-up">▲ 12%</div>
+        </div>
+      </div>
+
+      <!-- Deployments table -->
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Recent deployments</h2>
+          <div class="meta" style="display:flex;gap:10px;align-items:center">
+            <span>Showing 8 of 42</span>
+            <button class="btn btn-ghost btn-sm">View all →</button>
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:32px"><input type="checkbox"/></th>
+              <th>Status</th>
+              <th>Deployment</th>
+              <th>Branch</th>
+              <th>Commit</th>
+              <th>Author</th>
+              <th>Duration</th>
+              <th>Age</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><input type="checkbox"/></td>
+              <td><span class="status s-ready"><span class="dot"></span>Ready</span></td>
+              <td><a href="#" style="color:var(--accent);font-family:var(--font-mono);font-size:12px">minimax-platform-d4f8a2c1</a></td>
+              <td><span class="branch"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M6 8v8M8 6h6a4 4 0 014 4"/></svg>main</span></td>
+              <td><div class="commit"><span class="msg">feat: stream agent completions over SSE</span><span class="hash">d4f8a2c</span></div></td>
+              <td><div class="author"><span class="av" style="background:#000;color:#fff">K</span>Kai</div></td>
+              <td><span class="duration">38s</span></td>
+              <td class="td-mono" style="color:var(--ink-3)">2m ago</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"/></td>
+              <td><span class="status s-ready"><span class="dot"></span>Ready</span></td>
+              <td><a href="#" style="color:var(--accent);font-family:var(--font-mono);font-size:12px">minimax-platform-a92c1e0b</a></td>
+              <td><span class="branch"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M6 8v8M8 6h6a4 4 0 014 4"/></svg>feat/cache</span></td>
+              <td><div class="commit"><span class="msg">perf: cache nested agent prompts</span><span class="hash">a92c1e0</span></div></td>
+              <td><div class="author"><span class="av" style="background:#16a34a;color:#fff">M</span>Mira</div></td>
+              <td><span class="duration">42s</span></td>
+              <td class="td-mono" style="color:var(--ink-3)">14m ago</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"/></td>
+              <td><span class="status s-building"><span class="dot"></span>Building</span></td>
+              <td><a href="#" style="color:var(--accent);font-family:var(--font-mono);font-size:12px">minimax-platform-7b38f29e</a></td>
+              <td><span class="branch"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M6 8v8M8 6h6a4 4 0 014 4"/></svg>fix/trace-collapse</span></td>
+              <td><div class="commit"><span class="msg">fix: timeline collapse animation skip</span><span class="hash">7b38f29</span></div></td>
+              <td><div class="author"><span class="av" style="background:#f5a623;color:#000">O</span>Owen</div></td>
+              <td><span class="duration">…</span></td>
+              <td class="td-mono" style="color:var(--ink-3)">in progress</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"/></td>
+              <td><span class="status s-ready"><span class="dot"></span>Ready</span></td>
+              <td><a href="#" style="color:var(--accent);font-family:var(--font-mono);font-size:12px">minimax-platform-c1039af2</a></td>
+              <td><span class="branch"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M6 8v8M8 6h6a4 4 0 014 4"/></svg>main</span></td>
+              <td><div class="commit"><span class="msg">docs: rebuild quickstart for video</span><span class="hash">c1039af</span></div></td>
+              <td><div class="author"><span class="av" style="background:#7928ca;color:#fff">R</span>Ren</div></td>
+              <td><span class="duration">36s</span></td>
+              <td class="td-mono" style="color:var(--ink-3)">38m ago</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"/></td>
+              <td><span class="status s-queued"><span class="dot"></span>Queued</span></td>
+              <td><a href="#" style="color:var(--accent);font-family:var(--font-mono);font-size:12px">minimax-platform-2e8c4a91</a></td>
+              <td><span class="branch"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M6 8v8M8 6h6a4 4 0 014 4"/></svg>feat/sso-okta</span></td>
+              <td><div class="commit"><span class="msg">feat: handle Okta group claim edges</span><span class="hash">2e8c4a9</span></div></td>
+              <td><div class="author"><span class="av" style="background:#f5a623;color:#000">O</span>Owen</div></td>
+              <td><span class="duration">—</span></td>
+              <td class="td-mono" style="color:var(--ink-3)">queued</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"/></td>
+              <td><span class="status s-ready"><span class="dot"></span>Ready</span></td>
+              <td><a href="#" style="color:var(--accent);font-family:var(--font-mono);font-size:12px">minimax-platform-8a1d6f44</a></td>
+              <td><span class="branch"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M6 8v8M8 6h6a4 4 0 014 4"/></svg>main</span></td>
+              <td><div class="commit"><span class="msg">chore: bump node 20.18</span><span class="hash">8a1d6f4</span></div></td>
+              <td><div class="author"><span class="av" style="background:#000;color:#fff">K</span>Kai</div></td>
+              <td><span class="duration">31s</span></td>
+              <td class="td-mono" style="color:var(--ink-3)">1h ago</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"/></td>
+              <td><span class="status s-error"><span class="dot"></span>Error</span></td>
+              <td><a href="#" style="color:var(--accent);font-family:var(--font-mono);font-size:12px">minimax-platform-f8821c3a</a></td>
+              <td><span class="branch"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M6 8v8M8 6h6a4 4 0 014 4"/></svg>fix/sso-okta</span></td>
+              <td><div class="commit"><span class="msg">wip: okta group mapping</span><span class="hash">f8821c3</span></div></td>
+              <td><div class="author"><span class="av" style="background:#f5a623;color:#000">O</span>Owen</div></td>
+              <td><span class="duration">22s</span></td>
+              <td class="td-mono" style="color:var(--ink-3)">2h ago</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"/></td>
+              <td><span class="status s-canceled"><span class="dot"></span>Canceled</span></td>
+              <td><a href="#" style="color:var(--accent);font-family:var(--font-mono);font-size:12px">minimax-platform-441b3e02</a></td>
+              <td><span class="branch"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M6 8v8M8 6h6a4 4 0 014 4"/></svg>feat/density</span></td>
+              <td><div class="commit"><span class="msg">wip: density toggle</span><span class="hash">441b3e0</span></div></td>
+              <td><div class="author"><span class="av" style="background:#7928ca;color:#fff">P</span>Pia</div></td>
+              <td><span class="duration">—</span></td>
+              <td class="td-mono" style="color:var(--ink-3)">3h ago</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Build log preview (dark terminal block) -->
+      <div class="log-panel">
+        <div class="log-head">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <div class="title">build · minimax-platform-d4f8a2c1 · 38s · iad1</div>
+        </div>
+        <div class="log-body">
+<span class="prompt">$</span> <span class="hi">vercel build</span>
+<span class="info">info</span>  Detected Next.js 15.1.4 · target: production
+<span class="info">info</span>  Installing dependencies…
+<span class="ok">✓</span>  pnpm install · 1m 12s · 412 packages
+<span class="info">info</span>  Linting and type-checking…
+<span class="ok">✓</span>  tsc --noEmit · 8s
+<span class="ok">✓</span>  eslint . · 4s · 0 warnings
+<span class="info">info</span>  Building static pages…
+<span class="ok">✓</span>  42 static pages generated
+<span class="ok">✓</span>  Edge functions bundled (4)
+<span class="ok">✓</span>  Finalizing…
+<span class="hi">Deployment ready</span> <span class="ok">d4f8a2c1</span> → <span class="info">https://minimax-platform.vercel.app</span>
+<span class="info">info</span>  Total time: <span class="hi">38s</span> · Region: <span class="hi">iad1</span> · Cache hit: <span class="ok">78%</span>
+        </div>
+      </div>
+
+      <!-- Token panel -->
+      <div class="token-panel">
+        <h2>Skinning system — <strong>Geist discipline in 4 tokens</strong></h2>
+        <p style="color:var(--ink-2);font-size:14px;margin-bottom:24px;max-width:680px;line-height:1.55">Vercel-style design systems are defined by what they leave out. Restraint is the feature. To rebrand this entire shell — including the dark build log block — change the 4 groups below. Every component reads from CSS custom properties: every border, every mono digit, every status pill updates.</p>
+
+        <div class="section-title">Surfaces — true black on true white</div>
+        <div class="token-grid">
+          <div class="tok"><div class="chip" style="background:#ffffff;border:1px solid #eaeaea"></div><div><div class="name">--bg</div><div class="val">#ffffff · canvas</div></div></div>
+          <div class="tok"><div class="chip" style="background:#fafafa;border:1px solid #eaeaea"></div><div><div class="name">--bg-2</div><div class="val">#fafafa · subtle</div></div></div>
+          <div class="tok"><div class="chip" style="background:#f5f5f5"></div><div><div class="name">--bg-3</div><div class="val">#f5f5f5 · row</div></div></div>
+          <div class="tok"><div class="chip" style="background:#000000"></div><div><div class="name">--ink-1</div><div class="val">#000000 · terminal</div></div></div>
+        </div>
+
+        <div class="section-title">Ink — true black for text</div>
+        <div class="token-grid">
+          <div class="tok"><div class="chip" style="background:#000000"></div><div><div class="name">--ink-1</div><div class="val">#000000 · primary</div></div></div>
+          <div class="tok"><div class="chip" style="background:#404040"></div><div><div class="name">--ink-2</div><div class="val">#404040 · body</div></div></div>
+          <div class="tok"><div class="chip" style="background:#707070"></div><div><div class="name">--ink-3</div><div class="val">#707070 · muted</div></div></div>
+          <div class="tok"><div class="chip" style="background:#a3a3a3"></div><div><div class="name">--ink-4</div><div class="val">#a3a3a3 · meta</div></div></div>
+        </div>
+
+        <div class="section-title">Brand — one electric blue, used like punctuation</div>
+        <p style="color:var(--ink-3);font-size:13px;margin:0 0 12px">Vercel reserves color for links, focus rings, and active states. Gradients are saved for launch days.</p>
+        <div class="token-grid">
+          <div class="tok"><div class="chip" style="background:#0070f3"></div><div><div class="name">--accent</div><div class="val">#0070f3 · link</div></div></div>
+          <div class="tok"><div class="chip" style="background:#005ad1"></div><div><div class="name">--accent-hover</div><div class="val">#005ad1 · hover</div></div></div>
+          <div class="tok"><div class="chip" style="background:#e0f0ff"></div><div><div class="name">--accent-soft</div><div class="val">#e0f0ff · info</div></div></div>
+          <div class="tok"><div class="chip" style="background:#7928ca"></div><div><div class="name">--violet</div><div class="val">#7928ca · launch</div></div></div>
+        </div>
+
+        <div class="section-title">Type — Geist on Google Fonts (Inter substitute)</div>
+<div class="code-block"><span class="c">/* Skin this entire shell by changing 4 values.
+   Geist is on Google Fonts (Geist, Geist Mono). */</span>
+<span class="k">:root</span> {
+  <span class="k">--font-sans</span>: <span class="s">"Geist"</span>, <span class="s">"Inter"</span>, sans-serif;
+  <span class="k">--bg</span>:        <span class="v">#ffffff</span>;   <span class="c">/* canvas */</span>
+  <span class="k">--ink-1</span>:     <span class="v">#000000</span>;   <span class="c">/* primary text + primary CTA */</span>
+  <span class="k">--accent</span>:    <span class="v">#0070f3</span>;   <span class="c">/* link — one chromatic */</span>
+}
+
+<span class="c">/* Result: every deployment row, every mono commit hash,
+   every status pill, every build log line updates. The
+   terminal block stays true black because that's what
+   terminals do. */</span></div>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MiniMax App · Supabase-style</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ----- Supabase Dark Emerald token set (rebranded for MiniMax) -----
+       Sources: design-extractor.com/supabase, open-design.ai/supabase,
+                explainx.ai/supabase, designmd.app/supabase
+       Principles applied:
+         - Dark-mode native. Backgrounds #0f0f0f and #171717.
+         - Single emerald accent #3ecf8e (success, brand, links)
+         - Border hierarchy over shadows:
+              #242424 (barely visible) → #2e2e2e (standard) → #393939 (prominent)
+         - Green border at rgba(62,207,142,0.3) = the "elevated" state
+         - Inter 14/500 default, HSL-based token system, pill primary buttons
+         - Terminal-born aesthetic: code editor pattern, SQL runner
+    ------------------------------------------------------------------- */
+    :root {
+      --bg: #0f0f0f;
+      --bg-2: #171717;
+      --bg-3: #1c1c1c;
+      --bg-4: #232323;
+      --surface: #171717;
+      --surface-2: #1c1c1c;
+      --surface-3: #232323;
+      --surface-hover: #262626;
+      --ink-1: #ededed;
+      --ink-2: #b4b4b4;
+      --ink-3: #898989;
+      --ink-4: #5e5e5e;
+      --border-subtle: #242424;
+      --border: #2e2e2e;
+      --border-strong: #393939;
+      --border-accent: rgba(62, 207, 142, 0.3);
+      --accent: #3ecf8e;
+      --accent-hover: #46e49c;
+      --accent-soft: rgba(62, 207, 142, 0.12);
+      --accent-text: #00c573;        /* branded links */
+      --warn: #f5a623;
+      --error: #dc2626;
+      --info: #3daeff;
+      --sql-keyword: #3ecf8e;
+      --sql-string: #f5a623;
+      --sql-num: #a78bfa;
+      --sql-comment: #5e5e5e;
+      --font-sans: "Inter", -apple-system, "SF Pro Display", system-ui, sans-serif;
+      --font-mono: "JetBrains Mono", "Berkeley Mono", ui-monospace, "SF Mono", Menlo, monospace;
+      --r-sm: 4px; --r-md: 6px; --r-lg: 8px; --r-pill: 11px;
+      --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-12: 48px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;background:var(--bg);color:var(--ink-1);font-family:var(--font-sans);font-size:13.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+    code,pre,.mono{font-family:var(--font-mono);font-size:12.5px}
+    a{color:var(--accent-text);text-decoration:none}
+    a:hover{color:var(--accent-hover)}
+    button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
+
+    /* === Shell === */
+    .app{display:grid;grid-template-columns:48px 240px 1fr;height:100vh}
+    .ws-rail{background:#0a0a0a;border-right:1px solid var(--border-subtle);padding:8px 0;display:flex;flex-direction:column;align-items:center;gap:6px}
+    .ws-logo{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#3ecf8e,#00c573);display:grid;place-items:center;color:#0a0a0a;font-weight:800;font-size:14px;margin-bottom:6px}
+    .ws-av{width:30px;height:30px;border-radius:7px;background:var(--surface-3);border:1px solid var(--border);display:grid;place-items:center;font-size:11px;font-weight:600;color:var(--ink-2);cursor:pointer}
+    .ws-divider{width:24px;height:1px;background:var(--border);margin:4px 0}
+    .spacer{flex:1}
+
+    .sidebar{background:var(--bg-2);border-right:1px solid var(--border);overflow-y:auto;padding:12px 8px 16px;display:flex;flex-direction:column;gap:14px}
+    .org-head{display:flex;align-items:center;gap:8px;padding:4px 8px 8px;border-bottom:1px solid var(--border-subtle);margin-bottom:4px}
+    .org-glyph{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#3ecf8e,#00c573);display:grid;place-items:center;color:#0a0a0a;font-weight:800;font-size:11px}
+    .org-name{font-weight:600;font-size:12.5px;color:var(--ink-1);letter-spacing:-0.005em}
+    .org-sub{font-size:10.5px;color:var(--ink-3);font-family:var(--font-mono)}
+    .org-caret{margin-left:auto;color:var(--ink-3);font-size:9px}
+
+    .nav-search{display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--r-md);color:var(--ink-3);font-size:12px;cursor:pointer}
+    .nav-search:hover{border-color:var(--border-strong)}
+    .nav-search .ico{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.6}
+    .nav-search .kbd{margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--ink-3)}
+
+    .nav-group{display:flex;flex-direction:column;gap:1px}
+    .nav-group .label{font-size:10.5px;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-3);font-weight:600;padding:6px 8px 4px;display:flex;justify-content:space-between;align-items:center}
+    .nav-group .label .add{color:var(--ink-4);font-size:14px;line-height:1;cursor:pointer}
+    .nav-item{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:var(--r-sm);color:var(--ink-2);font-size:12.5px;cursor:pointer;transition:background 0.1s ease}
+    .nav-item:hover{background:var(--surface-3);color:var(--ink-1)}
+    .nav-item.active{background:var(--surface-3);color:var(--ink-1);font-weight:500;box-shadow:inset 2px 0 0 var(--accent)}
+    .nav-item .ico{width:14px;height:14px;color:var(--ink-3);stroke:currentColor;fill:none;stroke-width:1.6}
+    .nav-item.active .ico{color:var(--accent)}
+    .nav-item .badge{margin-left:auto;font-size:10px;background:var(--bg-4);color:var(--ink-3);padding:1px 5px;border-radius:6px;font-family:var(--font-mono)}
+
+    .nav-table{display:flex;align-items:center;gap:6px;padding:3px 8px 3px 26px;font-size:12px;color:var(--ink-2);cursor:pointer;border-radius:var(--r-sm)}
+    .nav-table:hover{background:var(--surface-3);color:var(--ink-1)}
+    .nav-table.active{color:var(--ink-1);background:var(--surface-3)}
+    .nav-table .ico{width:12px;height:12px;color:var(--ink-4);stroke:currentColor;fill:none;stroke-width:1.6}
+    .nav-table .type{font-family:var(--font-mono);font-size:9.5px;color:var(--ink-4);margin-left:auto}
+
+    /* === Main === */
+    .main{display:grid;grid-template-rows:auto 1fr;overflow:hidden}
+    .topbar{display:grid;grid-template-columns:1fr auto;align-items:center;padding:7px 14px;background:var(--bg-2);border-bottom:1px solid var(--border);gap:14px;min-height:42px}
+    .crumbs{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2)}
+    .crumbs .sep{color:var(--ink-4)}
+    .crumbs .current{color:var(--ink-1);font-weight:500}
+    .crumbs .badge-conn{display:inline-flex;align-items:center;gap:5px;padding:2px 7px;background:var(--accent-soft);border:1px solid var(--border-accent);border-radius:var(--r-pill);font-size:11px;font-weight:500;color:var(--accent);margin-left:6px;font-family:var(--font-mono)}
+    .crumbs .badge-conn .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent)}
+    .topbar-actions{display:flex;align-items:center;gap:6px}
+
+    .btn{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:var(--r-md);font-size:12px;font-weight:500;border:1px solid transparent;cursor:pointer;transition:all 0.1s ease;white-space:nowrap}
+    .btn-primary{background:var(--accent);color:#0a0a0a;font-weight:600}
+    .btn-primary:hover{background:var(--accent-hover)}
+    .btn-ghost{background:transparent;color:var(--ink-2);border:1px solid var(--border)}
+    .btn-ghost:hover{background:var(--surface-3);color:var(--ink-1);border-color:var(--border-strong)}
+    .btn-accent-soft{background:var(--accent-soft);color:var(--accent);border:1px solid var(--border-accent)}
+    .btn-accent-soft:hover{background:rgba(62,207,142,0.2)}
+    .btn-sm{padding:3px 8px;font-size:11.5px}
+    .btn-icon{width:26px;height:26px;display:grid;place-items:center;border-radius:var(--r-sm);color:var(--ink-3);border:1px solid transparent;cursor:pointer}
+    .btn-icon:hover{background:var(--surface-3);color:var(--ink-1);border-color:var(--border)}
+
+    .content{overflow-y:auto;padding:18px 24px 60px}
+    .page-head{margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+    .page-head h1{font-size:18px;font-weight:600;letter-spacing:-0.01em;line-height:1.2;margin:0;color:var(--ink-1);font-family:var(--font-mono)}
+    .page-head .lede{font-size:12.5px;color:var(--ink-3);margin-top:3px}
+
+    /* === Tabs (pill-shaped) === */
+    .tabs{display:flex;align-items:center;gap:1px;padding:0;margin-bottom:14px;border-bottom:1px solid var(--border)}
+    .tab{padding:6px 12px;font-size:12.5px;font-weight:500;color:var(--ink-3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:5px}
+    .tab:hover{color:var(--ink-1)}
+    .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+    /* === Stat strip (4-up, no shadow, border-separated) === */
+    .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:18px;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;background:var(--bg-2)}
+    .stat{padding:12px 16px;border-right:1px solid var(--border)}
+    .stat:last-child{border-right:0}
+    .stat .label{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);font-weight:600;margin-bottom:4px}
+    .stat .value{font-size:20px;font-weight:600;letter-spacing:-0.01em;color:var(--ink-1);font-variant-numeric:tabular-nums;line-height:1.1;display:flex;align-items:baseline;gap:3px}
+    .stat .value .unit{font-size:11px;font-weight:400;color:var(--ink-3)}
+
+    /* === SQL Editor === */
+    .sql-editor{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;margin-bottom:18px}
+    .sql-head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-3);border-bottom:1px solid var(--border)}
+    .sql-head .title{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2);font-weight:500}
+    .sql-head .title .ico{color:var(--accent)}
+    .sql-head .meta{font-size:11.5px;color:var(--ink-3);font-family:var(--font-mono)}
+    .sql-body{display:grid;grid-template-columns:48px 1fr;font-family:var(--font-mono);font-size:12.5px;line-height:1.7}
+    .sql-gutter{padding:10px 0;color:var(--ink-4);text-align:right;background:var(--bg);border-right:1px solid var(--border)}
+    .sql-gutter div{padding:0 10px}
+    .sql-code{padding:10px 14px;color:var(--ink-2);background:var(--bg);overflow-x:auto;white-space:pre}
+    .kw{color:var(--sql-keyword);font-weight:500}
+    .str{color:var(--sql-string)}
+    .num{color:var(--sql-num)}
+    .cmt{color:var(--sql-comment);font-style:italic}
+    .fn{color:var(--info)}
+    .col{color:var(--ink-1)}
+    .op{color:var(--ink-3)}
+    .sql-foot{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-3);border-top:1px solid var(--border)}
+    .sql-foot .results{font-size:11.5px;color:var(--ink-3);font-family:var(--font-mono)}
+    .sql-foot .results .ok{color:var(--accent);font-weight:500}
+    .sql-actions{display:flex;gap:6px}
+
+    /* === Table view === */
+    .table-panel{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;margin-bottom:18px}
+    .table-head{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--border);gap:12px;background:var(--bg-3)}
+    .table-head h2{font-size:12.5px;font-weight:600;color:var(--ink-1);font-family:var(--font-mono);margin:0;display:flex;align-items:center;gap:6px}
+    .table-head h2 .ico{color:var(--accent);width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.6}
+    .table-toolbar{display:flex;align-items:center;gap:6px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--bg-2)}
+    .table-toolbar .filter{display:flex;align-items:center;gap:5px;padding:3px 8px;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--r-sm);font-size:11.5px;color:var(--ink-3);cursor:pointer}
+    .table-toolbar .filter:hover{border-color:var(--border-strong);color:var(--ink-1)}
+
+    .db-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}
+    .db-table th{font-size:10.5px;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-3);font-weight:600;text-align:left;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--bg-2);height:28px;white-space:nowrap}
+    .db-table td{padding:8px 12px;border-bottom:1px solid var(--border-subtle);color:var(--ink-2);vertical-align:middle;white-space:nowrap}
+    .db-table tr:hover td{background:var(--surface-2)}
+    .db-table tr.selected td{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
+    .db-id{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-3)}
+    .db-name{color:var(--ink-1);font-weight:500}
+    .db-email{color:var(--ink-2)}
+    .db-num{font-variant-numeric:tabular-nums;font-family:var(--font-mono);font-size:12px;text-align:right}
+    .db-status{display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:var(--r-sm);font-size:11px;font-weight:500;font-family:var(--font-mono)}
+    .db-status .dot{width:5px;height:5px;border-radius:50%}
+    .db-active{background:var(--accent-soft);color:var(--accent);border:1px solid var(--border-accent)}
+    .db-active .dot{background:var(--accent);box-shadow:0 0 4px var(--accent)}
+    .db-trial{background:rgba(245,166,35,0.12);color:var(--warn);border:1px solid rgba(245,166,35,0.3)}
+    .db-trial .dot{background:var(--warn)}
+    .db-churned{background:rgba(220,38,38,0.12);color:var(--error);border:1px solid rgba(220,38,38,0.3)}
+    .db-churned .dot{background:var(--error)}
+
+    .table-foot{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--bg-3);border-top:1px solid var(--border);font-size:11.5px;color:var(--ink-3);font-family:var(--font-mono)}
+    .table-foot .pager{display:flex;align-items:center;gap:4px}
+    .table-foot .pager .step{padding:2px 7px;border-radius:var(--r-sm);cursor:pointer;color:var(--ink-2)}
+    .table-foot .pager .step.active{background:var(--bg-4);color:var(--ink-1)}
+    .table-foot .pager .step:hover{background:var(--bg-4);color:var(--ink-1)}
+
+    /* === Token panel === */
+    .token-panel{margin-top:20px;padding:28px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-md)}
+    .token-panel h2{font-size:18px;font-weight:600;letter-spacing:-0.012em;margin:0 0 4px;color:var(--ink-1)}
+    .token-panel h2 strong{color:var(--accent)}
+    .token-panel .sub{color:var(--ink-3);font-size:13px;margin-bottom:18px;max-width:680px;line-height:1.55}
+    .section-title{font-size:10.5px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);font-weight:600;margin:14px 0 8px}
+    .token-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-bottom:12px}
+    .tok{background:var(--bg-3);border:1px solid var(--border);border-radius:var(--r-md);padding:8px 10px;display:flex;align-items:center;gap:9px}
+    .tok .chip{width:26px;height:26px;border-radius:5px;border:1px solid var(--border);flex-shrink:0}
+    .tok .name{font-family:var(--font-mono);font-size:11px;color:var(--ink-1);font-weight:500}
+    .tok .val{font-family:var(--font-mono);font-size:10px;color:var(--ink-3);margin-top:2px}
+    .code-block{background:#0a0a0a;color:#b4b4b4;border:1px solid var(--border);border-radius:var(--r-md);padding:16px 18px;font-family:var(--font-mono);font-size:11.5px;line-height:1.7;overflow-x:auto;white-space:pre}
+    .code-block .k{color:#3ecf8e}
+    .code-block .s{color:#f5a623}
+    .code-block .c{color:#5e5e5e;font-style:italic}
+    .code-block .v{color:#a78bfa}
+
+    .back-bar{padding:5px 14px;background:#0a0a0a;border-bottom:1px solid var(--border-subtle);font-size:11px;display:flex;justify-content:space-between;align-items:center}
+    .back-bar a{color:var(--ink-3)}
+    .back-bar a:hover{color:var(--accent)}
+    .back-bar .tag-version{font-family:var(--font-mono);color:var(--ink-4)}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="ws-rail">
+    <div class="ws-logo" title="MiniMax">M</div>
+    <div class="ws-av" title="Personal">K</div>
+    <div class="ws-divider"></div>
+    <div class="ws-av" title="minimax-prod" style="background:linear-gradient(135deg,#3ecf8e,#00c573);color:#0a0a0a;border-color:transparent">M</div>
+    <div class="ws-av" title="staging">S</div>
+    <div class="spacer"></div>
+    <div class="ws-av" title="Settings" style="background:var(--bg-3);color:var(--ink-3)">⚙</div>
+  </aside>
+
+  <aside class="sidebar">
+    <div class="org-head">
+      <div class="org-glyph">M</div>
+      <div>
+        <div class="org-name">MiniMax</div>
+        <div class="org-sub">minimax-prod</div>
+      </div>
+      <span class="org-caret">▾</span>
+    </div>
+    <div class="nav-search">
+      <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <span>Search tables, docs…</span>
+      <span class="kbd">/</span>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-item">
+        <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Project overview
+      </div>
+      <div class="nav-item">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M3 12h18M12 3a15 15 0 010 18"/></svg>
+        SQL editor
+      </div>
+      <div class="nav-item">
+        <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        Table editor
+      </div>
+      <div class="nav-item active">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M5 9c0-2 2-4 4-4h6c2 0 4 2 4 4v6c0 2-2 4-4 4H9c-2 0-4-2-4-4z"/><path d="M3 12h18"/></svg>
+        Database
+      </div>
+      <div class="nav-item">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M19 11H5a2 2 0 00-2 2v6a2 2 0 002 2h14a2 2 0 002-2v-6a2 2 0 00-2-2z"/></svg>
+        Auth
+      </div>
+      <div class="nav-item">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M9 12l2 2 4-4"/></svg>
+        Realtime
+        <span class="badge">12</span>
+      </div>
+      <div class="nav-item">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Storage
+      </div>
+      <div class="nav-item">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M12 2l2.4 5 5.6.8-4 3.9 1 5.6L12 14.8 6.9 17.3l1-5.6-4-3.9 5.6-.8z"/></svg>
+        Edge Functions
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <div class="label">Schemas <span class="add">+</span></div>
+      <div class="nav-item" style="font-family:var(--font-mono);font-size:11.5px">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M5 9c0-2 2-4 4-4h6c2 0 4 2 4 4v6c0 2-2 4-4 4H9c-2 0-4-2-4-4z"/></svg>
+        public
+      </div>
+      <div class="nav-table active">
+        <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+        customers
+        <span class="type">1.2k</span>
+      </div>
+      <div class="nav-table">
+        <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+        subscriptions
+        <span class="type">412</span>
+      </div>
+      <div class="nav-table">
+        <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+        events
+        <span class="type">28k</span>
+      </div>
+      <div class="nav-table">
+        <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+        api_keys
+        <span class="type">84</span>
+      </div>
+      <div class="nav-table">
+        <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+        audit_log
+        <span class="type">12k</span>
+      </div>
+      <div class="nav-item" style="font-family:var(--font-mono);font-size:11.5px">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M5 9c0-2 2-4 4-4h6c2 0 4 2 4 4v6c0 2-2 4-4 4H9c-2 0-4-2-4-4z"/></svg>
+        storage
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="back-bar">
+      <a href="styles.html" style="color:var(--ink-3)">← All styles</a>
+      <span class="tag-version">webapp-supabase · v1</span>
+    </div>
+    <div class="topbar">
+      <div class="crumbs">
+        <span>public</span>
+        <span class="sep">/</span>
+        <span class="current">customers</span>
+        <span class="badge-conn"><span class="dot"></span>connected · minimax-prod</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost">View policies</button>
+        <button class="btn btn-accent-soft">+ New row</button>
+        <button class="btn btn-primary">+ Insert</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="page-head">
+        <div>
+          <h1>public.customers</h1>
+          <div class="lede">1,284 rows · 8 columns · 312 KB · last analyzed 4 minutes ago</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm">Filter</button>
+          <button class="btn btn-ghost btn-sm">Sort</button>
+          <button class="btn btn-ghost btn-sm">Export</button>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <span class="tab active">Data · 1,284</span>
+        <span class="tab">Structure</span>
+        <span class="tab">Relationships</span>
+        <span class="tab">Indexes · 4</span>
+        <span class="tab">Policies · 3</span>
+        <span class="tab">Triggers · 2</span>
+        <span class="tab">RLS</span>
+      </div>
+
+      <!-- Stat strip -->
+      <div class="stat-row">
+        <div class="stat">
+          <div class="label">Total rows</div>
+          <div class="value">1,284</div>
+        </div>
+        <div class="stat">
+          <div class="label">Active</div>
+          <div class="value">812</div>
+        </div>
+        <div class="stat">
+          <div class="label">Trial</div>
+          <div class="value">316</div>
+        </div>
+        <div class="stat">
+          <div class="label">Churned 30d</div>
+          <div class="value" style="color:var(--error)">42</div>
+        </div>
+      </div>
+
+      <!-- SQL editor preview -->
+      <div class="sql-editor">
+        <div class="sql-head">
+          <div class="title">
+            <svg class="ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 9c0-2 2-4 4-4h6c2 0 4 2 4 4v6c0 2-2 4-4 4H9c-2 0-4-2-4-4z"/></svg>
+            <span>query · 1</span>
+            <span style="color:var(--ink-3);font-weight:400;margin-left:8px">— active customers created this month</span>
+          </div>
+          <div class="meta">⌘⏎ to run</div>
+        </div>
+        <div class="sql-body"><div class="sql-gutter"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div></div><div class="sql-code"><span class="kw">select</span> <span class="col">id</span><span class="op">,</span> <span class="col">email</span><span class="op">,</span> <span class="col">plan</span><span class="op">,</span> <span class="col">mrr_cents</span><span class="op">,</span> <span class="col">created_at</span>
+  <span class="kw">from</span> <span class="col">public.customers</span>
+ <span class="kw">where</span> <span class="col">status</span> <span class="op">=</span> <span class="str">'active'</span>
+   <span class="kw">and</span> <span class="col">created_at</span> <span class="op">>=</span> <span class="fn">date_trunc</span><span class="op">(</span><span class="str">'month'</span><span class="op">,</span> <span class="fn">now</span><span class="op">())</span>
+ <span class="kw">order by</span> <span class="col">created_at</span> <span class="kw">desc</span>
+ <span class="kw">limit</span> <span class="num">50</span><span class="op">;</span></div></div>
+        <div class="sql-foot">
+          <div class="results">Returned <span class="ok">50 rows</span> · 184 ms · 1.2 MB scanned</div>
+          <div class="sql-actions">
+            <button class="btn btn-ghost btn-sm">Format</button>
+            <button class="btn btn-ghost btn-sm">Copy</button>
+            <button class="btn btn-primary btn-sm">⌘⏎ Run</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table view -->
+      <div class="table-panel">
+        <div class="table-head">
+          <h2>
+            <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+            customers
+            <span style="color:var(--ink-3);font-weight:400">· 50 rows</span>
+          </h2>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm">+ Column</button>
+            <button class="btn btn-ghost btn-sm">Refresh</button>
+          </div>
+        </div>
+        <div class="table-toolbar">
+          <div class="filter">status = active <span style="color:var(--ink-4);margin-left:4px">×</span></div>
+          <div class="filter">created_at ≥ 2026-09-01 <span style="color:var(--ink-4);margin-left:4px">×</span></div>
+          <div class="filter" style="margin-left:auto">+ Add filter</div>
+        </div>
+        <table class="db-table">
+          <thead>
+            <tr>
+              <th style="width:30px"><input type="checkbox" style="accent-color:var(--accent)"/></th>
+              <th>id</th>
+              <th>email</th>
+              <th>name</th>
+              <th>plan</th>
+              <th>status</th>
+              <th style="text-align:right">mrr_cents</th>
+              <th>created_at</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="selected">
+              <td><input type="checkbox" checked style="accent-color:var(--accent)"/></td>
+              <td class="db-id">cus_01HMZ…4a2f</td>
+              <td class="db-email">lumen@lumen.studio</td>
+              <td class="db-name">Lumen Studios</td>
+              <td class="mono" style="font-size:11.5px">scale</td>
+              <td><span class="db-status db-active"><span class="dot"></span>active</span></td>
+              <td class="db-num">49,900</td>
+              <td class="mono" style="font-size:11.5px;color:var(--ink-3)">2m ago</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" style="accent-color:var(--accent)"/></td>
+              <td class="db-id">cus_01HMY…b81c</td>
+              <td class="db-email">aria@aria.park</td>
+              <td class="db-name">Aria Park</td>
+              <td class="mono" style="font-size:11.5px">pro</td>
+              <td><span class="db-status db-active"><span class="dot"></span>active</span></td>
+              <td class="db-num">4,900</td>
+              <td class="mono" style="font-size:11.5px;color:var(--ink-3)">14m ago</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" style="accent-color:var(--accent)"/></td>
+              <td class="db-id">cus_01HMX…29ee</td>
+              <td class="db-email">team@ostara.io</td>
+              <td class="db-name">Ostara Labs</td>
+              <td class="mono" style="font-size:11.5px">scale</td>
+              <td><span class="db-status db-active"><span class="dot"></span>active</span></td>
+              <td class="db-num">199,000</td>
+              <td class="mono" style="font-size:11.5px;color:var(--ink-3)">38m ago</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" style="accent-color:var(--accent)"/></td>
+              <td class="db-id">cus_01HMW…f3a8</td>
+              <td class="db-email">bram@vex.dev</td>
+              <td class="db-name">Bram Vex</td>
+              <td class="mono" style="font-size:11.5px">trial</td>
+              <td><span class="db-status db-trial"><span class="dot"></span>trial</span></td>
+              <td class="db-num">0</td>
+              <td class="mono" style="font-size:11.5px;color:var(--ink-3)">1h ago</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" style="accent-color:var(--accent)"/></td>
+              <td class="db-id">cus_01HMV…1c0d</td>
+              <td class="db-email">hi@coda.health</td>
+              <td class="db-name">Coda Health</td>
+              <td class="mono" style="font-size:11.5px">pro</td>
+              <td><span class="db-status db-active"><span class="dot"></span>active</span></td>
+              <td class="db-num">4,900</td>
+              <td class="mono" style="font-size:11.5px;color:var(--ink-3)">2h ago</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" style="accent-color:var(--accent)"/></td>
+              <td class="db-id">cus_01HMU…8a2e</td>
+              <td class="db-email">ops@vesper.co</td>
+              <td class="db-name">Vesper Inc.</td>
+              <td class="mono" style="font-size:11.5px">enterprise</td>
+              <td><span class="db-status db-active"><span class="dot"></span>active</span></td>
+              <td class="db-num">999,000</td>
+              <td class="mono" style="font-size:11.5px;color:var(--ink-3)">3h ago</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" style="accent-color:var(--accent)"/></td>
+              <td class="db-id">cus_01HMT…7d9b</td>
+              <td class="db-email">mira@quan.studio</td>
+              <td class="db-name">Mira Quan</td>
+              <td class="mono" style="font-size:11.5px">trial</td>
+              <td><span class="db-status db-trial"><span class="dot"></span>trial</span></td>
+              <td class="db-num">0</td>
+              <td class="mono" style="font-size:11.5px;color:var(--ink-3)">4h ago</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" style="accent-color:var(--accent)"/></td>
+              <td class="db-id">cus_01HMS…3f1a</td>
+              <td class="db-email">team@driftwood.cc</td>
+              <td class="db-name">Driftwood Co.</td>
+              <td class="mono" style="font-size:11.5px">scale</td>
+              <td><span class="db-status db-churned"><span class="dot"></span>churned</span></td>
+              <td class="db-num" style="color:var(--ink-3)">0</td>
+              <td class="mono" style="font-size:11.5px;color:var(--ink-3)">5h ago</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="table-foot">
+          <div>1,284 rows · 50 shown · page 1 of 26</div>
+          <div class="pager">
+            <span class="step">‹</span>
+            <span class="step active">1</span>
+            <span class="step">2</span>
+            <span class="step">3</span>
+            <span class="step">…</span>
+            <span class="step">26</span>
+            <span class="step">›</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Token panel -->
+      <div class="token-panel">
+        <h2>Skinning system — <strong>terminal-born, border-driven</strong></h2>
+        <p style="color:var(--ink-3);font-size:13px;margin-bottom:18px;max-width:680px;line-height:1.55">Supabase-style systems deliberately avoid shadows in dark mode — they don't read. Depth is communicated through a 3-step border hierarchy, plus the green accent border at 30% opacity for the elevated/active state. To rebrand this entire shell, change the 4 groups below.</p>
+
+        <div class="section-title">Surfaces — three dark plates</div>
+        <div class="token-grid">
+          <div class="tok"><div class="chip" style="background:#0f0f0f"></div><div><div class="name">--bg</div><div class="val">#0f0f0f · canvas</div></div></div>
+          <div class="tok"><div class="chip" style="background:#171717"></div><div><div class="name">--bg-2</div><div class="val">#171717 · panel</div></div></div>
+          <div class="tok"><div class="chip" style="background:#1c1c1c"></div><div><div class="name">--bg-3</div><div class="val">#1c1c1c · row</div></div></div>
+          <div class="tok"><div class="chip" style="background:#232323"></div><div><div class="name">--bg-4</div><div class="val">#232323 · raised</div></div></div>
+        </div>
+
+        <div class="section-title">Borders — three steps, not shadows</div>
+        <div class="token-grid">
+          <div class="tok"><div class="chip" style="background:#242424"></div><div><div class="name">--border-subtle</div><div class="val">#242424 · hint</div></div></div>
+          <div class="tok"><div class="chip" style="background:#2e2e2e"></div><div><div class="name">--border</div><div class="val">#2e2e2e · default</div></div></div>
+          <div class="tok"><div class="chip" style="background:#393939"></div><div><div class="name">--border-strong</div><div class="val">#393939 · prominent</div></div></div>
+          <div class="tok"><div class="chip" style="background:rgba(62,207,142,0.3)"></div><div><div class="name">--border-accent</div><div class="val">rgba(62,207,142,0.3) · elevated</div></div></div>
+        </div>
+
+        <div class="section-title">Brand — one emerald, always 30% on the elevated border</div>
+        <div class="token-grid">
+          <div class="tok"><div class="chip" style="background:#3ecf8e"></div><div><div class="name">--accent</div><div class="val">#3ecf8e · brand</div></div></div>
+          <div class="tok"><div class="chip" style="background:#00c573"></div><div><div class="name">--accent-text</div><div class="val">#00c573 · link</div></div></div>
+          <div class="tok"><div class="chip" style="background:rgba(62,207,142,0.12)"></div><div><div class="name">--accent-soft</div><div class="val">rgba(62,207,142,0.12) · bg</div></div></div>
+        </div>
+
+        <div class="section-title">Skinning recipe</div>
+<div class="code-block"><span class="c">/* Skin this whole shell by changing 4 values.
+   The border hierarchy is the depth signal — not shadows. */</span>
+<span class="k">:root</span> {
+  <span class="k">--bg</span>:         <span class="v">#0f0f0f</span>;   <span class="c">/* canvas */</span>
+  <span class="k">--border</span>:     <span class="v">#2e2e2e</span>;   <span class="c">/* default border = depth */</span>
+  <span class="k">--accent</span>:     <span class="v">#3ecf8e</span>;   <span class="c">/* brand — one chromatic */</span>
+  <span class="k">--font-mono</span>:  <span class="s">"JetBrains Mono"</span>, monospace;
+}
+
+<span class="c">/* Result: every border, every status pill, every SQL keyword
+   color, every connection badge updates. The 3-step border
+   hierarchy reads as depth without a single shadow. */</span></div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MiniMax App · Notion-style</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <style>
+    /* ----- Notion-style token set (rebranded for MiniMax) -----
+       Sources: designlang.app/gallery/notion-so, design-analyser.blueprintlab.io/notion,
+                github.com/shade-solutions/notion-design-system
+       Principles applied:
+         - Warm neutrals: bg #fbfaf8, text #37352f (Notion's signature ink)
+         - NOT pure white. Slight warmth in every surface.
+         - Text-first hierarchy — type does the work, color stays quiet
+         - Subtle borders (#e8e5e0, #dfdcd9), low elevation, no heavy shadows
+         - Block-based content: H1/H2/H3, body, callout, code, to-do, toggle, quote
+         - Nested sidebar (workspace > page > subpage)
+         - Inter for UI + Lora italic for editorial accents
+         - Small 4-6px radii, pill tags, soft blues (#2383e2)
+    ------------------------------------------------------------------- */
+    :root {
+      --bg: #fbfaf8;          /* Notion's warm canvas */
+      --bg-2: #f7f6f3;        /* hover */
+      --bg-3: #f1efeb;        /* active/selected */
+      --surface: #ffffff;
+      --surface-2: #f7f6f3;
+      --surface-3: #f1efeb;
+      --ink-1: #37352f;       /* Notion's signature body ink */
+      --ink-2: #4a4842;
+      --ink-3: #787774;       /* muted */
+      --ink-4: #9b9a97;       /* meta */
+      --border: #e8e5e0;      /* subtle warm border */
+      --border-strong: #dfdcd9;
+      --border-soft: #efedea;
+      --accent: #2383e2;      /* Notion blue */
+      --accent-hover: #1a73d1;
+      --accent-soft: #e3f0fb;
+      --accent-bg: #d9e9f7;
+      --yellow-bg: #fdecc8;
+      --yellow-border: #f4d98b;
+      --green: #0f7b6c;
+      --green-bg: #dbeddb;
+      --red: #e03e3e;
+      --red-bg: #fbe4e4;
+      --purple: #9065e0;
+      --purple-bg: #ebe5f7;
+      --orange: #d9730d;
+      --font-sans: "Inter", -apple-system, "SF Pro Display", system-ui, sans-serif;
+      --font-serif: "Lora", Georgia, "Times New Roman", serif;
+      --font-mono: "JetBrains Mono", "Berkeley Mono", ui-monospace, "SF Mono", Menlo, monospace;
+      --r-sm: 3px; --r-md: 4px; --r-lg: 6px; --r-pill: 4px;
+      --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px; --s-8: 48px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;background:var(--bg);color:var(--ink-1);font-family:var(--font-sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+    code,pre,.mono{font-family:var(--font-mono);font-size:13.5px}
+    a{color:inherit;text-decoration:none}
+    button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
+
+    /* === Shell === */
+    .app{display:grid;grid-template-columns:260px 1fr;height:100vh}
+    .sidebar{background:var(--bg-2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+    .sb-head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:8px 10px;gap:8px}
+    .ws-switcher{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:var(--r-md);font-size:13px;font-weight:500;color:var(--ink-1);cursor:pointer;min-width:0}
+    .ws-switcher:hover{background:var(--bg-3)}
+    .ws-switcher .av{width:18px;height:18px;border-radius:4px;background:linear-gradient(135deg,#37352f,#787774);color:#fff;display:grid;place-items:center;font-size:10px;font-weight:700;flex-shrink:0}
+    .ws-switcher .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ws-switcher .caret{color:var(--ink-4);font-size:9px;flex-shrink:0}
+    .sb-icons{display:flex;gap:2px}
+    .sb-icons .ic{width:24px;height:24px;display:grid;place-items:center;border-radius:4px;color:var(--ink-3);cursor:pointer}
+    .sb-icons .ic:hover{background:var(--bg-3);color:var(--ink-1)}
+
+    .sb-scroll{flex:1;overflow-y:auto;padding:6px 6px 16px}
+    .sb-section{margin-bottom:8px}
+    .sb-section .label{font-size:11px;color:var(--ink-4);font-weight:500;padding:4px 8px 2px;display:flex;align-items:center;justify-content:space-between}
+    .sb-section .label .add{color:var(--ink-4);cursor:pointer;padding:0 4px}
+    .sb-item{display:flex;align-items:center;gap:5px;padding:3px 6px;border-radius:var(--r-md);color:var(--ink-2);font-size:13.5px;cursor:pointer;line-height:1.3}
+    .sb-item:hover{background:var(--bg-3);color:var(--ink-1)}
+    .sb-item.active{background:var(--bg-3);color:var(--ink-1);font-weight:500}
+    .sb-item .emoji{font-size:14px;line-height:1;width:18px;text-align:center;flex-shrink:0}
+    .sb-item .ico{width:14px;height:14px;color:var(--ink-4);stroke:currentColor;fill:none;stroke-width:1.6;flex-shrink:0}
+    .sb-item .badge{margin-left:auto;font-size:10.5px;color:var(--ink-4);font-family:var(--font-mono);background:transparent;padding:0 4px}
+    .sb-sub{padding-left:14px}
+
+    .sb-foot{padding:6px 10px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:var(--ink-4)}
+    .sb-foot .left{display:flex;align-items:center;gap:6px}
+    .sb-foot .av{width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#2383e2,#9065e0);color:#fff;display:grid;place-items:center;font-size:10px;font-weight:700}
+
+    /* === Main === */
+    .main{display:grid;grid-template-rows:auto 1fr;overflow:hidden;background:var(--bg)}
+    .topbar{display:grid;grid-template-columns:1fr auto;align-items:center;padding:6px 14px;border-bottom:1px solid var(--border);background:var(--bg);gap:14px;min-height:42px}
+    .breadcrumbs{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink-3);overflow:hidden}
+    .breadcrumbs .crumb{color:var(--ink-2);display:flex;align-items:center;gap:4px;padding:2px 6px;border-radius:3px;cursor:pointer;white-space:nowrap}
+    .breadcrumbs .crumb:hover{background:var(--bg-3);color:var(--ink-1)}
+    .breadcrumbs .crumb.current{color:var(--ink-1)}
+    .breadcrumbs .crumb .emo{font-size:13px}
+    .breadcrumbs .sep{color:var(--ink-4);font-size:10px}
+    .topbar-actions{display:flex;align-items:center;gap:6px}
+    .tb-btn{padding:3px 8px;border-radius:var(--r-md);color:var(--ink-3);font-size:12.5px;cursor:pointer;display:flex;align-items:center;gap:4px}
+    .tb-btn:hover{background:var(--bg-3);color:var(--ink-1)}
+    .tb-btn .ico{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.6}
+    .tb-btn.primary{background:var(--accent);color:#fff;font-weight:500}
+    .tb-btn.primary:hover{background:var(--accent-hover)}
+    .tb-divider{width:1px;height:18px;background:var(--border);margin:0 2px}
+
+    .content{overflow-y:auto}
+    .page{max-width:900px;margin:0 auto;padding:48px 96px 200px}
+
+    .cover{height:200px;background:linear-gradient(135deg,#fdecc8 0%,#f4d98b 50%,#dbeddb 100%);border-radius:var(--r-md);margin-bottom:-80px;position:relative;overflow:hidden}
+    .cover::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 30% 40%,rgba(255,255,255,0.4),transparent 60%)}
+
+    .page-icon{position:relative;width:78px;height:78px;background:#fff;border:1px solid var(--border);border-radius:var(--r-md);display:grid;place-items:center;font-size:44px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,0.04);z-index:1}
+
+    .page-title{font-family:var(--font-sans);font-size:40px;font-weight:700;letter-spacing:-0.022em;line-height:1.15;margin:0 0 6px;color:var(--ink-1);outline:none}
+    .page-meta{font-size:13px;color:var(--ink-3);display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:36px}
+    .page-meta .meta{display:flex;align-items:center;gap:4px}
+    .page-meta .meta .ico{width:13px;height:13px;color:var(--ink-4);stroke:currentColor;fill:none;stroke-width:1.6}
+    .page-meta .meta .av{width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#2383e2,#9065e0);color:#fff;display:grid;place-items:center;font-size:9px;font-weight:700}
+
+    /* === Block styles === */
+    .block{margin-bottom:6px;position:relative;border-radius:var(--r-md);padding:4px 6px;margin-left:-6px;margin-right:-6px}
+    .block:hover{background:var(--bg-2)}
+    .block .gutter{position:absolute;left:-32px;top:6px;width:24px;display:flex;gap:1px;opacity:0;transition:opacity 0.1s ease}
+    .block:hover .gutter{opacity:1}
+    .block .gutter .g{width:18px;height:18px;display:grid;place-items:center;border-radius:3px;color:var(--ink-4);cursor:pointer;font-size:14px;line-height:1}
+    .block .gutter .g:hover{background:var(--bg-3);color:var(--ink-1)}
+
+    .b-h1{font-size:30px;font-weight:700;letter-spacing:-0.02em;color:var(--ink-1);line-height:1.25;margin-top:32px;margin-bottom:6px}
+    .b-h2{font-size:24px;font-weight:600;letter-spacing:-0.015em;color:var(--ink-1);line-height:1.3;margin-top:24px;margin-bottom:4px}
+    .b-h3{font-size:18px;font-weight:600;color:var(--ink-1);line-height:1.35;margin-top:18px;margin-bottom:4px}
+    .b-body{font-size:15px;color:var(--ink-1);line-height:1.6}
+    .b-body .link{color:var(--accent);text-decoration:underline;text-decoration-color:rgba(35,131,226,0.3);text-underline-offset:2px}
+    .b-body .link:hover{text-decoration-color:var(--accent)}
+    .b-body strong{font-weight:600;color:var(--ink-1)}
+    .b-body em{font-style:italic;font-family:var(--font-serif)}
+    .b-body code{background:var(--bg-3);padding:1px 5px;border-radius:3px;font-size:13.5px;color:#eb5757;border:1px solid var(--border)}
+
+    .b-todo{display:flex;align-items:flex-start;gap:6px;padding:3px 0}
+    .b-todo .check{width:16px;height:16px;border:1.5px solid var(--ink-4);border-radius:3px;flex-shrink:0;margin-top:5px;cursor:pointer;display:grid;place-items:center}
+    .b-todo .check:hover{border-color:var(--ink-1)}
+    .b-todo.done .check{background:var(--accent);border-color:var(--accent);color:#fff;font-size:11px}
+    .b-todo.done .text{color:var(--ink-3);text-decoration:line-through}
+    .b-todo .text{font-size:15px;color:var(--ink-1);line-height:1.55}
+
+    .b-bullet{display:flex;align-items:flex-start;gap:6px;padding:2px 0}
+    .b-bullet .dot{width:5px;height:5px;border-radius:50%;background:var(--ink-3);flex-shrink:0;margin-top:10px}
+    .b-bullet .text{font-size:15px;color:var(--ink-1);line-height:1.6}
+
+    .b-callout{display:flex;align-items:flex-start;gap:10px;padding:14px 16px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-md);margin:6px 0}
+    .b-callout .icon{font-size:20px;line-height:1;flex-shrink:0;margin-top:1px}
+    .b-callout.yellow{background:var(--yellow-bg);border-color:var(--yellow-border)}
+    .b-callout.blue{background:var(--accent-soft);border-color:rgba(35,131,226,0.25)}
+    .b-callout .text{font-size:14.5px;color:var(--ink-1);line-height:1.55}
+
+    .b-quote{border-left:3px solid var(--ink-1);padding:2px 0 2px 14px;margin:6px 0}
+    .b-quote .text{font-family:var(--font-serif);font-size:16px;color:var(--ink-2);line-height:1.55;font-style:italic}
+
+    .b-code{display:block;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-md);padding:14px 16px;font-family:var(--font-mono);font-size:13px;color:var(--ink-1);line-height:1.6;margin:6px 0;overflow-x:auto;white-space:pre}
+
+    .b-toggle{display:flex;align-items:flex-start;gap:5px;padding:2px 0}
+    .b-toggle .caret{width:18px;height:18px;display:grid;place-items:center;color:var(--ink-3);cursor:pointer;font-size:9px;margin-top:5px;flex-shrink:0}
+    .b-toggle .text{font-size:15px;color:var(--ink-1);font-weight:500}
+    .b-toggle .sub{font-size:14px;color:var(--ink-2);margin-top:4px;margin-left:24px;line-height:1.55}
+
+    .b-divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+
+    /* === Inline properties (Notion-style meta) === */
+    .props{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;margin:14px 0 28px;padding:6px 0}
+    .props .k{color:var(--ink-3);display:flex;align-items:center;gap:5px;padding:4px 0}
+    .props .v{padding:4px 0;color:var(--ink-1);display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+    .props .pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--r-md);font-size:12px;color:var(--ink-1)}
+    .props .pill .dot{width:6px;height:6px;border-radius:50%}
+    .props .pill.green{background:var(--green-bg);border-color:rgba(15,123,108,0.25);color:var(--green)}
+    .props .pill.purple{background:var(--purple-bg);border-color:rgba(144,101,224,0.25);color:var(--purple)}
+    .props .pill.orange{background:#fde4cf;border-color:rgba(217,115,13,0.25);color:var(--orange)}
+    .props .pill.red{background:var(--red-bg);border-color:rgba(224,62,62,0.25);color:var(--red)}
+
+    /* === Token panel === */
+    .token-panel{margin:48px -96px 0;padding:32px 96px;background:var(--bg-2);border-top:1px solid var(--border)}
+    .token-panel h2{font-size:24px;font-weight:600;letter-spacing:-0.015em;margin:0 0 6px;color:var(--ink-1)}
+    .token-panel h2 strong{font-weight:700}
+    .token-panel .sub{color:var(--ink-2);font-size:14.5px;margin-bottom:20px;max-width:680px;line-height:1.55}
+    .section-title{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);font-weight:600;margin:16px 0 8px}
+    .token-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-bottom:10px}
+    .tok{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:8px 10px;display:flex;align-items:center;gap:9px}
+    .tok .chip{width:26px;height:26px;border-radius:4px;border:1px solid var(--border);flex-shrink:0}
+    .tok .name{font-family:var(--font-mono);font-size:11px;color:var(--ink-1);font-weight:500}
+    .tok .val{font-family:var(--font-mono);font-size:10px;color:var(--ink-3);margin-top:2px}
+    .code-block{background:#2f3437;color:#d4d4d4;border-radius:var(--r-md);padding:16px 18px;font-family:var(--font-mono);font-size:12px;line-height:1.7;overflow-x:auto;white-space:pre;border:1px solid #1f2326}
+    .code-block .k{color:#79c0ff}
+    .code-block .s{color:#a5d6ff}
+    .code-block .c{color:#6b7280;font-style:italic}
+    .code-block .v{color:#ffa657}
+
+    .back-bar{padding:6px 14px;background:var(--bg-2);border-bottom:1px solid var(--border);font-size:11.5px;display:flex;justify-content:space-between;align-items:center}
+    .back-bar a{color:var(--ink-3)}
+    .back-bar a:hover{color:var(--accent)}
+    .back-bar .tag-version{font-family:var(--font-mono);color:var(--ink-4)}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-head">
+      <div class="ws-switcher">
+        <div class="av">K</div>
+        <span class="name">Kai's workspace</span>
+        <span class="caret">▾</span>
+      </div>
+      <div class="sb-icons">
+        <div class="ic" title="Search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+        <div class="ic" title="New page"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg></div>
+      </div>
+    </div>
+
+    <div class="sb-scroll">
+      <div class="sb-section">
+        <div class="sb-item"><span class="ico">⚙</span>Settings & members</div>
+        <div class="sb-item"><span class="ico">↗</span>Updates</div>
+        <div class="sb-item"><span class="ico">⌂</span>Home</div>
+        <div class="sb-item"><span class="ico">📥</span>Inbox <span class="badge">3</span></div>
+      </div>
+
+      <div class="sb-section">
+        <div class="label">Favorites <span class="add">+</span></div>
+        <div class="sb-item"><span class="emoji">🚀</span>M3 launch plan</div>
+        <div class="sb-item"><span class="emoji">🛣️</span>2026 product roadmap</div>
+        <div class="sb-item"><span class="emoji">📐</span>Design system tokens</div>
+        <div class="sb-item"><span class="emoji">🧠</span>Research notes</div>
+      </div>
+
+      <div class="sb-section">
+        <div class="label">Workspace <span class="add">+</span></div>
+        <div class="sb-item"><span class="emoji">📋</span>Docs overview</div>
+        <div class="sb-item"><span class="emoji">📊</span>Q3 metrics</div>
+        <div class="sb-item active"><span class="emoji">🎨</span>Design system v3
+          <div class="sb-sub">
+            <div class="sb-item" style="padding:2px 6px;font-size:12.5px"><span class="emoji">🪙</span>Color tokens</div>
+            <div class="sb-item" style="padding:2px 6px;font-size:12.5px"><span class="emoji">🔤</span>Typography</div>
+            <div class="sb-item active" style="padding:2px 6px;font-size:12.5px"><span class="emoji">🧱</span>Component inventory</div>
+            <div class="sb-item" style="padding:2px 6px;font-size:12.5px"><span class="emoji">📐</span>Spacing scale</div>
+            <div class="sb-item" style="padding:2px 6px;font-size:12.5px"><span class="emoji">✨</span>Motion principles</div>
+          </div>
+        </div>
+        <div class="sb-item"><span class="emoji">🤖</span>Agents v2 RFC</div>
+        <div class="sb-item"><span class="emoji">📝</span>Meeting notes</div>
+        <div class="sb-item"><span class="emoji">🎓</span>Onboarding</div>
+      </div>
+
+      <div class="sb-section">
+        <div class="label">Shared <span class="add">+</span></div>
+        <div class="sb-item"><span class="emoji">📣</span>Marketing site brief</div>
+        <div class="sb-item"><span class="emoji">💰</span>Pricing experiment</div>
+      </div>
+    </div>
+
+    <div class="sb-foot">
+      <div class="left"><span class="av">K</span><span>Logged in as Kai</span></div>
+      <span>···</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="back-bar">
+      <a href="styles.html">← All styles</a>
+      <span class="tag-version">webapp-notion · v1</span>
+    </div>
+    <div class="topbar">
+      <div class="breadcrumbs">
+        <span class="crumb"><span class="emo">🎨</span>Design system v3</span>
+        <span class="sep">/</span>
+        <span class="crumb current"><span class="emo">🧱</span>Component inventory</span>
+        <span class="tb-divider"></span>
+        <span class="crumb" style="color:var(--ink-4)">Edited 12 min ago</span>
+      </div>
+      <div class="topbar-actions">
+        <span class="tb-btn"><svg class="ico" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6M19 8v6"/></svg>Share</span>
+        <span class="tb-btn"><svg class="ico" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Comment</span>
+        <span class="tb-divider"></span>
+        <span class="tb-btn"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
+        <span class="tb-btn primary">⌘⏎ Update</span>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="page">
+        <div class="cover"></div>
+        <div class="page-icon">🧱</div>
+        <h1 class="page-title">Component inventory</h1>
+        <div class="page-meta">
+          <div class="meta"><span class="ico">👤</span><div class="av">K</div>Kai · <span style="color:var(--ink-4)">last edited 12 min ago</span></div>
+          <div class="meta"><span class="ico">📅</span>Created 2026-08-14</div>
+          <div class="meta"><span class="ico">👁</span>Viewed 18 times</div>
+        </div>
+
+        <div class="props">
+          <div class="k"><span class="ico">🏷️</span>Status</div>
+          <div class="v"><span class="pill green"><span class="dot" style="background:var(--green)"></span>In review</span></div>
+
+          <div class="k"><span class="ico">📅</span>Due date</div>
+          <div class="v">Sep 15, 2026</div>
+
+          <div class="k"><span class="ico">👥</span>Owners</div>
+          <div class="v"><div class="av" style="width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#2383e2,#9065e0);color:#fff;display:inline-grid;place-items:center;font-size:10px;font-weight:600;margin-right:-6px">K</div><div class="av" style="width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#0f7b6c,#9065e0);color:#fff;display:inline-grid;place-items:center;font-size:10px;font-weight:600;margin-right:-6px">M</div><div class="av" style="width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#d9730d,#e03e3e);color:#fff;display:inline-grid;place-items:center;font-size:10px;font-weight:600">R</div></div>
+
+          <div class="k"><span class="ico">⚙️</span>Type</div>
+          <div class="v"><span class="pill purple"><span class="dot" style="background:var(--purple)"></span>Reference</span><span class="pill">Design system</span></div>
+
+          <div class="k"><span class="ico">🔗</span>Related</div>
+          <div class="v"><a href="#" class="link">🪙 Color tokens</a> · <a href="#" class="link">🔤 Typography</a> · <a href="#" class="link">✨ Motion principles</a></div>
+        </div>
+
+        <div class="b-h1">Overview</div>
+        <div class="block">
+          <div class="gutter"><div class="g">+</div><div class="g">⋮</div></div>
+          <div class="b-body">This page is the canonical inventory of every <strong>component</strong> in the MiniMax design system v3. It pairs with the <a href="#" class="link">token files</a> on the design-system workspace — every component below consumes CSS custom properties, never raw values.</div>
+        </div>
+
+        <div class="b-callout yellow">
+          <div class="icon">💡</div>
+          <div class="text"><strong>Reading guide:</strong> this is a working inventory, not a marketing pitch. Use the toggle sections to drill into each component group. The current focus is on the v3 token migration; legacy v2 components are listed in <a href="#" class="link">the appendix</a>.</div>
+        </div>
+
+        <div class="b-h2">Foundations</div>
+
+        <div class="b-toggle">
+          <div class="caret">▾</div>
+          <div class="text">Color</div>
+        </div>
+        <div class="b-body b-toggle" style="padding-left:30px">11 surface tokens, 4 ink tokens, 2 border tokens, 7 brand accents, 3 semantic.</div>
+
+        <div class="b-toggle">
+          <div class="caret">▾</div>
+          <div class="text">Typography</div>
+        </div>
+        <div class="b-body b-toggle" style="padding-left:30px">Display: Outfit 600. Body: DM Sans 400. Mono: JetBrains Mono. Italics reserved for editorial accents only — emphasis is weight, never slope.</div>
+
+        <div class="b-toggle">
+          <div class="caret">▸</div>
+          <div class="text">Spacing & radius</div>
+        </div>
+
+        <div class="b-toggle">
+          <div class="caret">▸</div>
+          <div class="text">Shadows</div>
+        </div>
+
+        <div class="b-h2">Components</div>
+
+        <div class="b-h3">Buttons</div>
+        <div class="block">
+          <div class="gutter"><div class="g">+</div></div>
+          <div class="b-body">Three primary variants: <strong>primary</strong> (ink fill, pill, 14/500), <strong>secondary</strong> (white, hairline border, pill), and <strong>brand</strong> (saturated fill reserved for product release identity). All buttons share the same focus ring and disabled state.</div>
+        </div>
+
+        <div class="block">
+          <div class="gutter"><div class="g">+</div></div>
+          <div class="b-bullet"><div class="dot"></div><div class="text"><strong>States:</strong> default, hover, active, focus, disabled, loading. Each state has its own token reference.</div></div>
+        </div>
+        <div class="block">
+          <div class="gutter"><div class="g">+</div></div>
+          <div class="b-bullet"><div class="dot"></div><div class="text"><strong>Sizes:</strong> small (32px), default (40px), large (48px). Heights are token-driven, not magic numbers.</div></div>
+        </div>
+        <div class="block">
+          <div class="gutter"><div class="g">+</div></div>
+          <div class="b-bullet"><div class="dot"></div><div class="text"><strong>Icon variants:</strong> leading icon, trailing icon, icon-only. Icons inherit button text size; never hard-coded to 16px.</div></div>
+        </div>
+
+        <div class="b-h3">Inputs</div>
+        <div class="block">
+          <div class="gutter"><div class="g">+</div></div>
+          <div class="b-body">Pill-shaped by default, square inside data-dense forms. Focus ring uses <code>--ink-1</code> at 8% alpha. Validation states: success (green border), error (red border + helper text), warning (amber border).</div>
+        </div>
+
+        <div class="b-h3">Cards</div>
+        <div class="b-callout blue">
+          <div class="icon">📐</div>
+          <div class="text">Two card archetypes: <strong>documentation cards</strong> (16px radius, white, hairline border, 1-step shadow) and <strong>product identity cards</strong> (32px radius, vibrant gradient, no shadow). Mixing the two reads as inconsistency — pick the archetype per surface.</div>
+        </div>
+
+        <div class="b-h2">Migration tracker</div>
+        <div class="block">
+          <div class="gutter"><div class="g">+</div></div>
+          <div class="b-todo done"><div class="check">✓</div><div class="text">Token audit — 33 v2 tokens mapped to 27 v3 tokens</div></div>
+        </div>
+        <div class="block">
+          <div class="gutter"><div class="g">+</div></div>
+          <div class="b-todo done"><div class="check">✓</div><div class="text">Button component v3 spec signed off</div></div>
+        </div>
+        <div class="block">
+          <div class="gutter"><div class="g">+</div></div>
+          <div class="b-todo done"><div class="check">✓</div><div class="text">Input component v3 spec signed off</div></div>
+        </div>
+        <div class="block">
+          <div class="gutter"><div class="g">+</div></div>
+          <div class="b-todo"><div class="check"></div><div class="text">Card archetypes — review with marketing</div></div>
+        </div>
+        <div class="block">
+          <div class="gutter"><div class="g">+</div></div>
+          <div class="b-todo"><div class="check"></div><div class="text">Tag / pill / badge inventory — in progress</div></div>
+        </div>
+        <div class="block">
+          <div class="gutter"><div class="g">+</div></div>
+          <div class="b-todo"><div class="check"></div><div class="text">Motion principles doc</div></div>
+        </div>
+
+        <div class="b-h2">Code reference</div>
+        <div class="b-body">Component implementations live in <code>packages/ui</code>. Every component reads from the token layer — change a token, every component updates.</div>
+        <div class="b-code"><span style="color:#a5d6ff">// packages/ui/src/Button.tsx</span>
+<span style="color:#79c0ff">import</span> { <span style="color:#d4d4d4">tokens</span> } <span style="color:#79c0ff">from</span> <span style="color:#a5d6ff">"@minimax/tokens"</span>;
+
+<span style="color:#79c0ff">export const</span> <span style="color:#d4d4d4">Button</span> = ({ <span style="color:#d4d4d4">variant</span> = <span style="color:#a5d6ff">"primary"</span>, <span style="color:#d4d4d4">size</span> = <span style="color:#a5d6ff">"default"</span>, <span style="color:#d4d4d4">children</span> }) =&gt; (
+  &lt;<span style="color:#79c0ff">button</span> <span style="color:#d4d4d4">className</span>=<span style="color:#a5d6ff">`btn btn-${variant} btn-${size}`</span>&gt;
+    {<span style="color:#d4d4d4">children</span>}
+  &lt;/<span style="color:#79c0ff">button</span>&gt;
+);</div>
+
+        <div class="b-quote">
+          <div class="text">A design system is not a component library. It is a contract: the rules, tokens, and opinions that make your product legible to your team.</div>
+        </div>
+
+        <hr class="b-divider" />
+
+        <div class="b-body" style="color:var(--ink-3);font-size:13px">MiniMax design system v3 · component inventory · last edited by Kai · 12 min ago</div>
+      </div>
+
+      <!-- Token panel -->
+      <div class="token-panel">
+        <h2>Skinning system — <strong>warm neutrals, text-first</strong></h2>
+        <p style="color:var(--ink-2);font-size:14.5px;margin-bottom:20px;max-width:680px;line-height:1.55">Notion-style systems are quiet on purpose. The hierarchy is the type, the accent is the link, the warmth is in every surface. To rebrand this document canvas, change the 4 groups below. Every block — callout, code, toggle, todo — reads from the same token set.</p>
+
+        <div class="section-title">Surfaces — warm, never pure white</div>
+        <div class="token-grid">
+          <div class="tok"><div class="chip" style="background:#fbfaf8"></div><div><div class="name">--bg</div><div class="val">#fbfaf8 · canvas</div></div></div>
+          <div class="tok"><div class="chip" style="background:#f7f6f3"></div><div><div class="name">--bg-2</div><div class="val">#f7f6f3 · hover</div></div></div>
+          <div class="tok"><div class="chip" style="background:#f1efeb"></div><div><div class="name">--bg-3</div><div class="val">#f1efeb · active</div></div></div>
+          <div class="tok"><div class="chip" style="background:#ffffff"></div><div><div class="name">--surface</div><div class="val">#ffffff · card</div></div></div>
+        </div>
+
+        <div class="section-title">Ink — Notion's signature #37352f</div>
+        <div class="token-grid">
+          <div class="tok"><div class="chip" style="background:#37352f"></div><div><div class="name">--ink-1</div><div class="val">#37352f · body</div></div></div>
+          <div class="tok"><div class="chip" style="background:#4a4842"></div><div><div class="name">--ink-2</div><div class="val">#4a4842 · strong</div></div></div>
+          <div class="tok"><div class="chip" style="background:#787774"></div><div><div class="name">--ink-3</div><div class="val">#787774 · muted</div></div></div>
+          <div class="tok"><div class="chip" style="background:#9b9a97"></div><div><div class="name">--ink-4</div><div class="val">#9b9a97 · meta</div></div></div>
+        </div>
+
+        <div class="section-title">Brand + semantic — quiet, content-driven</div>
+        <div class="token-grid">
+          <div class="tok"><div class="chip" style="background:#2383e2"></div><div><div class="name">--accent</div><div class="val">#2383e2 · link</div></div></div>
+          <div class="tok"><div class="chip" style="background:#e3f0fb;border:1px solid rgba(35,131,226,0.25)"></div><div><div class="name">--accent-soft</div><div class="val">#e3f0fb · bg</div></div></div>
+          <div class="tok"><div class="chip" style="background:#fdecc8;border:1px solid #f4d98b"></div><div><div class="name">--yellow-bg</div><div class="val">#fdecc8 · callout</div></div></div>
+          <div class="tok"><div class="chip" style="background:#dbeddb;border:1px solid rgba(15,123,108,0.25)"></div><div><div class="name">--green-bg</div><div class="val">#dbeddb · success</div></div></div>
+        </div>
+
+        <div class="section-title">Skinning recipe</div>
+<div class="code-block"><span class="c">/* Skin this whole document canvas by changing 4 values.
+   Notion-style systems are quiet — the type does the work. */</span>
+<span class="k">:root</span> {
+  <span class="k">--bg</span>:       <span class="v">#fbfaf8</span>;   <span class="c">/* warm canvas, NOT pure white */</span>
+  <span class="k">--ink-1</span>:    <span class="v">#37352f</span>;   <span class="c">/* Notion's signature body ink */</span>
+  <span class="k">--accent</span>:   <span class="v">#2383e2</span>;   <span class="c">/* link blue — one chromatic */</span>
+  <span class="k">--font-sans</span>: <span class="s">"Inter"</span>, sans-serif;
+}
+
+<span class="c">/* Result: every H1, every callout, every block hover,
+   every code block, every link inherits the brand. The
+   warmth of the canvas is the brand identity. */</span></div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

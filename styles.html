@@ -57,9 +57,9 @@
 <div class="page">
   <header>
     <div class="kicker">MiniMax Design System · Variant Explorer</div>
-    <h1>Six style guides. Three app skins.</h1>
+    <h1>Six style guides. Six app skins.</h1>
     <p class="lead">
-      Six visual variants of the same MiniMax brand, plus three full web app shells (issue tracker, payments, creative studio) each modeled on a different 2026 trend. Use the toolbar to jump straight to a variant, or browse the cards to compare side by side.
+      Six visual variants of the same MiniMax brand, plus six full web app shells — issue tracker, payments, creative studio, deploy dashboard, database editor, document workspace — each modeled on a different 2026 trend. Use the toolbar to jump straight to a variant, or browse the cards to compare side by side.
     </p>
     <div class="toolbar">
       <span class="label">Jump to:</span>
@@ -132,8 +132,8 @@
   </section>
 
   <section style="margin-top:72px">
-    <h2 style="font-family:'Outfit',sans-serif;font-size:32px;font-weight:600;letter-spacing:-0.022em;line-height:1.1;margin:0 0 10px;color:var(--ink)">Web app skins</h2>
-    <p style="font-size:15px;color:var(--slate);max-width:780px;margin:0 0 28px;line-height:1.55">Three real, full app shells — issue tracker, payments dashboard, creative studio — each re-skinned from a 2026 trend source. Every page ships a token panel showing the 5–6 variables you change to rebrand the whole shell. The principle: skinning is a token swap, not a component rewrite.</p>
+    <h2 style="font-family:'Outfit',sans-serif;font-size:32px;font-weight:600;letter-spacing:-0.022em;line-height:1.1;margin:0 0 10px;color:var(--ink)">Web app skins <span style="color:var(--stone);font-weight:400;font-size:18px">· 6 variants</span></h2>
+    <p style="font-size:15px;color:var(--slate);max-width:780px;margin:0 0 28px;line-height:1.55">Six real, full app shells — issue tracker, payments, creative studio, deploy dashboard, database editor, document workspace — each re-skinned from a 2026 trend source. Every page ships a token panel showing the 3–5 variables you change to rebrand the whole shell. Skinning is a token swap, not a component rewrite.</p>
     <div class="grid">
       <a class="card" href="webapp-linear.html" style="background:#08090a;color:#f7f8f8;border-color:#23252a">
         <div class="card-kicker" style="color:#8a8f98">App skin 1 · Linear-style</div>
@@ -176,6 +176,48 @@
         </div>
         <div class="card-meta" style="color:rgba(255,255,255,0.7)">Inter · backdrop-filter · 3-token rebrand</div>
       </a>
+
+      <a class="card" href="webapp-vercel.html" style="background:#ffffff;color:#000000;border-color:#eaeaea">
+        <div class="card-kicker" style="color:#707070">App skin 4 · Vercel-style</div>
+        <div class="card-title">Vercel · restraint as feature</div>
+        <div class="card-body">Deployments dashboard shell. Geist Sans + Geist Mono (Inter substitute) · true black on true white · #0070f3 link blue · tabular numerics in deploy logs. Restraint is the feature.</div>
+        <div class="palette">
+          <span class="chip" style="background:#ffffff;border:1px solid #eaeaea"></span>
+          <span class="chip" style="background:#fafafa"></span>
+          <span class="chip" style="background:#f5f5f5"></span>
+          <span class="chip" style="background:#0070f3"></span>
+          <span class="chip" style="background:#000000"></span>
+        </div>
+        <div class="card-meta" style="color:#a3a3a3">Geist · true black/white · 4-token rebrand</div>
+      </a>
+
+      <a class="card" href="webapp-supabase.html" style="background:#0f0f0f;color:#ededed;border-color:#2e2e2e">
+        <div class="card-kicker" style="color:#898989">App skin 5 · Supabase-style</div>
+        <div class="card-title">Supabase · terminal-born</div>
+        <div class="card-body">Database editor shell. Dark-mode native · #3ecf8e emerald single accent · border hierarchy over shadows · SQL runner with syntax tokens. Modeled on supabase's HSL-token, border-driven depth.</div>
+        <div class="palette">
+          <span class="chip" style="background:#0f0f0f"></span>
+          <span class="chip" style="background:#171717"></span>
+          <span class="chip" style="background:#2e2e2e"></span>
+          <span class="chip" style="background:#3ecf8e"></span>
+          <span class="chip" style="background:rgba(62,207,142,0.3)"></span>
+        </div>
+        <div class="card-meta" style="color:#5e5e5e">Inter · border hierarchy · 4-token rebrand</div>
+      </a>
+
+      <a class="card" href="webapp-notion.html" style="background:#fbfaf8;color:#37352f;border-color:#e8e5e0">
+        <div class="card-kicker" style="color:#787774">App skin 6 · Notion-style</div>
+        <div class="card-title">Notion · warm neutrals, text-first</div>
+        <div class="card-body">Documents workspace shell. Warm #fbfaf8 canvas (not pure white) · #37352f signature ink · block-based content (toggle, callout, todo, code) · nested sidebar · quiet accent. Type does the work.</div>
+        <div class="palette">
+          <span class="chip" style="background:#fbfaf8;border:1px solid #e8e5e0"></span>
+          <span class="chip" style="background:#f1efeb"></span>
+          <span class="chip" style="background:#e8e5e0"></span>
+          <span class="chip" style="background:#37352f"></span>
+          <span class="chip" style="background:#2383e2"></span>
+        </div>
+        <div class="card-meta" style="color:#9b9a97">Inter + Lora · warm canvas · 4-token rebrand</div>
+      </a>
     </div>
   </section>
 
@@ -195,6 +237,9 @@
         <tr><td>W1</td><td><div class="name">Linear (issue tracker)</div><div class="desc">Dark · surface ladder · single accent</div></td><td>Soft (6–8px)</td><td>Near-black</td><td>Inter Variable 510</td><td><a href="webapp-linear.html">webapp-linear.html →</a></td></tr>
         <tr><td>W2</td><td><div class="name">Stripe (payments)</div><div class="desc">Light · typographic · tabular</div></td><td>Tight (4–6px)</td><td>White</td><td>Source Sans 3 300</td><td><a href="webapp-stripe.html">webapp-stripe.html →</a></td></tr>
         <tr><td>W3</td><td><div class="name">Liquid Glass (studio)</div><div class="desc">Vivid · backdrop-blur · layered</div></td><td>Rounded (8–14px)</td><td>Vivid gradient</td><td>Inter 700</td><td><a href="webapp-glass.html">webapp-glass.html →</a></td></tr>
+        <tr><td>W4</td><td><div class="name">Vercel (deployments)</div><div class="desc">True black/white · Geist · restraint</div></td><td>Soft (6–8px)</td><td>True white</td><td>Geist Sans 600</td><td><a href="webapp-vercel.html">webapp-vercel.html →</a></td></tr>
+        <tr><td>W5</td><td><div class="name">Supabase (table editor)</div><div class="desc">Dark emerald · border hierarchy · SQL</div></td><td>Tight (4–6px)</td><td>Near-black</td><td>Inter 500 + JetBrains Mono</td><td><a href="webapp-supabase.html">webapp-supabase.html →</a></td></tr>
+        <tr><td>W6</td><td><div class="name">Notion (documents)</div><div class="desc">Warm neutrals · text-first · blocks</div></td><td>Soft (3–6px)</td><td>Warm cream</td><td>Inter 400 + Lora italic</td><td><a href="webapp-notion.html">webapp-notion.html →</a></td></tr>
       </tbody>
     </table>
   </section>
