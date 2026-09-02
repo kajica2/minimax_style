@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MiniMax App · Liquid Glass</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ----- Liquid Glass / Disciplined Glassmorphism token set -----
+       Sources: setproduct.com (glassmorphism vs neumorphism vs liquid glass, 2026),
+                empire-ui.com 2026 ranking, neps.in (skeuomorphism to spatial UI),
+                Figma Web Design Trends 2026 (advanced glassmorphism w/ layering).
+       Principles applied:
+         - Frosted cards w/ backdrop-filter: blur(20-32px) on translucent fills
+         - 1px semi-transparent white border (rgba 0.15-0.2) acts as the highlight
+         - Vivid gradient or image UNDER the glass — never use glass on flat bg
+         - Limit blurred surfaces per scroll container (GPU cost)
+         - Type is the hierarchy anchor: glass cards are quiet, type does the work
+         - Layering: bg gradient → main card → sub-card → micro-card
+         - Strong text contrast inside glass; glass for chrome not body
+    ------------------------------------------------------------------- */
+    :root {
+      /* page background = gradient, NOT flat */
+      --bg-grad: radial-gradient(at 0% 0%, #ff6ec7 0px, transparent 50%),
+                 radial-gradient(at 100% 0%, #6ec7ff 0px, transparent 50%),
+                 radial-gradient(at 50% 100%, #c7ff6e 0px, transparent 50%),
+                 radial-gradient(at 0% 100%, #c76eff 0px, transparent 50%),
+                 linear-gradient(180deg, #0a0a1f 0%, #1a0a3a 100%);
+      --bg-fixed: fixed;
+      /* glass tokens */
+      --glass-1: rgba(255,255,255,0.06);
+      --glass-2: rgba(255,255,255,0.10);
+      --glass-3: rgba(255,255,255,0.14);
+      --glass-border: rgba(255,255,255,0.18);
+      --glass-border-strong: rgba(255,255,255,0.28);
+      --glass-shadow: 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.15);
+      --glass-blur: 24px;
+      --glass-blur-strong: 32px;
+      /* ink on dark */
+      --ink-1: #ffffff;
+      --ink-2: rgba(255,255,255,0.85);
+      --ink-3: rgba(255,255,255,0.62);
+      --ink-4: rgba(255,255,255,0.40);
+      /* accent — vivid (gradient-friendly) */
+      --accent-1: #ff6ec7;   /* magenta */
+      --accent-2: #6ec7ff;   /* cyan */
+      --accent-3: #c7ff6e;   /* lime */
+      --accent-4: #c76eff;   /* purple */
+      --accent-grad: linear-gradient(135deg, #ff6ec7 0%, #c76eff 50%, #6ec7ff 100%);
+      --accent-grad-warm: linear-gradient(135deg, #ff9d6e 0%, #ff6ec7 100%);
+      /* type */
+      --font-sans: "Inter", -apple-system, "SF Pro Display", system-ui, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, monospace;
+      --r-sm:8px;--r-md:14px;--r-lg:20px;--r-xl:28px;--r-pill:9999px;
+      --s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:20px;--s-6:24px;--s-8:32px;--s-12:48px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;color:var(--ink-1);font-family:var(--font-sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+    body{background:var(--bg-grad);background-attachment:var(--bg-fixed);overflow:hidden}
+    code,pre,.mono{font-family:var(--font-mono)}
+    a{color:inherit;text-decoration:none}
+    button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
+
+    /* === Glass primitive === */
+    .glass{background:var(--glass-1);backdrop-filter:blur(var(--glass-blur)) saturate(180%);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(180%);border:1px solid var(--glass-border);box-shadow:var(--glass-shadow);border-radius:var(--r-md)}
+    .glass-2{background:var(--glass-2);backdrop-filter:blur(var(--glass-blur-strong)) saturate(200%);-webkit-backdrop-filter:blur(var(--glass-blur-strong)) saturate(200%);border:1px solid var(--glass-border-strong);box-shadow:var(--glass-shadow)}
+    .glass-hover{transition:all 0.18s ease}
+    .glass-hover:hover{background:var(--glass-2);border-color:var(--glass-border-strong);transform:translateY(-1px)}
+
+    /* === App shell — floating glass elements on a vivid bg === */
+    .app{display:grid;grid-template-rows:auto 1fr;height:100vh}
+    .topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:10px 18px;gap:14px}
+    .topbar .brand{display:flex;align-items:center;gap:10px;padding:6px 10px 6px 6px;background:var(--glass-2);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1px solid var(--glass-border);border-radius:var(--r-pill);box-shadow:var(--glass-shadow)}
+    .brand-glyph{width:30px;height:30px;border-radius:50%;background:var(--accent-grad);display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;box-shadow:0 0 18px rgba(199,110,255,0.6)}
+    .brand-name{font-weight:700;font-size:14px;letter-spacing:-0.01em;padding-right:6px}
+    .topbar .breadcrumb{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--glass-1);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:var(--r-pill);font-size:12.5px;width:fit-content;margin:0 auto}
+    .topbar .breadcrumb .crumb{color:var(--ink-3)}
+    .topbar .breadcrumb .crumb.current{color:var(--ink-1);font-weight:500}
+    .topbar .breadcrumb .sep{color:var(--ink-4)}
+    .topbar-actions{display:flex;align-items:center;gap:8px}
+    .icon-btn{width:36px;height:36px;display:grid;place-items:center;border-radius:50%;background:var(--glass-1);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);color:var(--ink-1);cursor:pointer;transition:all 0.15s ease}
+    .icon-btn:hover{background:var(--glass-2);border-color:var(--glass-border-strong)}
+    .avatar-btn{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#ff6ec7,#c76eff);display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px;border:2px solid rgba(255,255,255,0.3);cursor:pointer;box-shadow:0 0 18px rgba(199,110,255,0.5)}
+
+    .body{display:grid;grid-template-columns:240px 1fr 320px;gap:14px;padding:0 18px 18px;height:calc(100vh - 64px);overflow:hidden}
+    .sidebar{display:flex;flex-direction:column;gap:14px;overflow-y:auto;padding-right:4px}
+    .panel{display:flex;flex-direction:column;overflow:hidden}
+    .panel .ph{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink-3);font-weight:600}
+    .panel .ph .count{color:var(--ink-4);font-weight:500}
+    .panel .pb{padding:0 12px 12px}
+
+    /* === Sidebar nav (glass) === */
+    .nav{display:flex;flex-direction:column;gap:2px;padding:6px}
+    .nav .item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--r-sm);color:var(--ink-2);font-size:13.5px;cursor:pointer;transition:all 0.12s ease}
+    .nav .item:hover{background:var(--glass-1);color:var(--ink-1)}
+    .nav .item.active{background:var(--glass-2);color:var(--ink-1);font-weight:500;box-shadow:inset 0 0 0 1px var(--glass-border-strong)}
+    .nav .item .ico{width:16px;height:16px;color:var(--ink-3);stroke:currentColor;fill:none;stroke-width:1.6}
+    .nav .item.active .ico{color:var(--accent-4)}
+    .nav .item .badge{margin-left:auto;font-size:10.5px;background:var(--accent-grad);color:#fff;padding:1px 7px;border-radius:var(--r-pill);font-weight:700}
+    .nav-divider{height:1px;background:var(--glass-border);margin:8px 12px}
+
+    /* === Main canvas (gallery) === */
+    .canvas{display:flex;flex-direction:column;overflow:hidden;position:relative}
+    .canvas-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--glass-border);gap:14px}
+    .canvas-head h1{font-size:20px;font-weight:700;letter-spacing:-0.015em;line-height:1.1;margin:0}
+    .canvas-head .lede{font-size:12.5px;color:var(--ink-3);margin-top:2px}
+    .toolbar{display:flex;align-items:center;gap:6px;padding:10px 20px}
+    .seg{display:flex;gap:2px;background:var(--glass-1);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:var(--r-pill);padding:3px}
+    .seg .opt{padding:5px 14px;font-size:12px;border-radius:var(--r-pill);color:var(--ink-3);cursor:pointer;transition:all 0.12s ease;font-weight:500}
+    .seg .opt:hover{color:var(--ink-1)}
+    .seg .opt.active{background:var(--glass-3);color:var(--ink-1);box-shadow:inset 0 0 0 1px var(--glass-border-strong)}
+    .glass-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:var(--glass-1);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--glass-border);border-radius:var(--r-pill);font-size:12px;color:var(--ink-2);cursor:pointer}
+    .glass-pill:hover{background:var(--glass-2)}
+    .glass-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--accent-3);box-shadow:0 0 6px var(--accent-3)}
+
+    /* === Gallery grid (glass cards) === */
+    .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;padding:0 20px 20px;overflow-y:auto;align-content:start}
+    .tile{position:relative;aspect-ratio:1;border-radius:var(--r-md);overflow:hidden;cursor:pointer;transition:all 0.18s ease;border:1px solid var(--glass-border)}
+    .tile:hover{transform:translateY(-2px) scale(1.01);box-shadow:0 12px 40px rgba(0,0,0,0.3),0 0 0 1px var(--glass-border-strong);z-index:2}
+    .tile.selected{box-shadow:0 0 0 2px var(--accent-1),0 12px 40px rgba(255,110,199,0.3);z-index:2}
+    .tile .art{position:absolute;inset:0}
+    .tile .meta{position:absolute;left:8px;right:8px;bottom:8px;display:flex;justify-content:space-between;align-items:flex-end;gap:6px;padding:6px 8px;background:rgba(0,0,0,0.4);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:11px}
+    .tile .meta .name{font-weight:600;color:#fff}
+    .tile .meta .type{font-family:var(--font-mono);color:rgba(255,255,255,0.7);font-size:10px}
+    .tile .check{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.3);display:grid;place-items:center;color:#fff;font-size:13px;font-weight:700;opacity:0;transition:opacity 0.12s}
+    .tile:hover .check,.tile.selected .check{opacity:1}
+    .tile.selected .check{background:var(--accent-1);border-color:transparent}
+
+    /* Procedurally-generated tile "art" — pure CSS gradients, no images */
+    .art-a{background:radial-gradient(at 30% 20%,#ff6ec7,#3a0a5e 70%)}
+    .art-b{background:linear-gradient(135deg,#6ec7ff 0%,#0a3a5e 60%,#c76eff 100%)}
+    .art-c{background:conic-gradient(from 45deg at 50% 50%,#ff9d6e,#c76eff,#6effc7,#ff9d6e)}
+    .art-d{background:radial-gradient(circle at 70% 30%,#c7ff6e,transparent 60%),linear-gradient(135deg,#1a1a3a,#0a0a1f)}
+    .art-e{background:linear-gradient(180deg,rgba(255,255,255,0.05) 0%,rgba(0,0,0,0.4) 100%),conic-gradient(from 180deg at 50% 50%,#6ec7ff,#c76eff,#ff6ec7,#6ec7ff)}
+    .art-f{background:radial-gradient(at 80% 80%,#ff6ec7,transparent 60%),radial-gradient(at 20% 20%,#6ec7ff,transparent 60%),#0a0a1f}
+    .art-g{background:linear-gradient(45deg,#c76eff 0%,#ff6ec7 50%,#6ec7ff 100%)}
+    .art-h{background:radial-gradient(circle at 50% 100%,#ff9d6e,transparent 50%),linear-gradient(180deg,#0a0a1f 0%,#1a0a3a 100%)}
+    .art-i{background:conic-gradient(from 0deg at 30% 70%,#c7ff6e,#0a3a5e,#c76eff,#c7ff6e)}
+    .art-j{background:linear-gradient(135deg,#ff9d6e,#ff6ec7 50%,#c76eff)}
+    .art-k{background:radial-gradient(at 20% 80%,#6effc7,transparent 50%),linear-gradient(135deg,#0a0a1f,#1a0a3a)}
+    .art-l{background:linear-gradient(180deg,#6ec7ff 0%,#c76eff 100%)}
+    .art-m{background:radial-gradient(circle,#ff6ec7,#0a0a1f 70%)}
+    .art-n{background:conic-gradient(from 270deg at 60% 40%,#6ec7ff,#ff6ec7,#c7ff6e,#6ec7ff)}
+    .art-o{background:linear-gradient(45deg,#0a0a1f 25%,#1a0a3a 25%,#1a0a3a 50%,#0a0a1f 50%,#0a0a1f 75%,#1a0a3a 75%);background-size:20px 20px}
+    .art-p{background:radial-gradient(at 60% 30%,#c7ff6e,transparent 60%),radial-gradient(at 20% 70%,#ff6ec7,transparent 60%),#1a0a3a}
+
+    /* === Inspector (right) — properties panel === */
+    .inspector{display:flex;flex-direction:column;gap:14px;overflow-y:auto;padding-right:4px}
+    .inspector .ph{padding:14px 18px 10px;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink-3);font-weight:600}
+    .field-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--glass-border);font-size:12.5px}
+    .field-row:last-child{border-bottom:0}
+    .field-row .k{color:var(--ink-3)}
+    .field-row .v{color:var(--ink-1);font-family:var(--font-mono);font-size:11.5px;font-weight:500}
+    .swatches-row{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;padding:4px 0}
+    .sw-mini{aspect-ratio:1;border-radius:5px;border:1px solid var(--glass-border);cursor:pointer;transition:all 0.12s ease}
+    .sw-mini:hover{transform:scale(1.1);box-shadow:0 0 0 1px var(--glass-border-strong)}
+    .sw-mini.active{box-shadow:0 0 0 2px var(--accent-1)}
+
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:var(--r-pill);font-size:13px;font-weight:600;border:1px solid transparent;cursor:pointer;transition:all 0.15s ease;white-space:nowrap}
+    .btn-grad{background:var(--accent-grad);color:#fff;border:0;box-shadow:0 4px 16px rgba(199,110,255,0.4)}
+    .btn-grad:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(199,110,255,0.55)}
+    .btn-glass{background:var(--glass-2);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:var(--ink-1);border:1px solid var(--glass-border)}
+    .btn-glass:hover{background:var(--glass-3);border-color:var(--glass-border-strong)}
+    .btn-block{width:100%}
+
+    /* === Modal-style preview === */
+    .preview{position:relative;aspect-ratio:16/10;border-radius:var(--r-md);overflow:hidden;margin:0 12px 12px;box-shadow:0 8px 32px rgba(0,0,0,0.4),inset 0 0 0 1px var(--glass-border)}
+    .preview .badge{position:absolute;top:10px;left:10px;display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(0,0,0,0.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--glass-border);border-radius:var(--r-pill);font-size:11px;font-weight:600;color:#fff}
+    .preview .badge .dot{width:6px;height:6px;border-radius:50%;background:var(--accent-3);box-shadow:0 0 6px var(--accent-3)}
+
+    .progress{height:4px;background:rgba(255,255,255,0.1);border-radius:var(--r-pill);overflow:hidden;margin:8px 0}
+    .progress .bar{height:100%;background:var(--accent-grad);border-radius:var(--r-pill);box-shadow:0 0 8px rgba(199,110,255,0.6)}
+
+    /* === Token panel === */
+    .token-panel{margin:14px 18px 0;padding:24px 28px;background:var(--glass-1);backdrop-filter:blur(var(--glass-blur-strong)) saturate(180%);-webkit-backdrop-filter:blur(var(--glass-blur-strong)) saturate(180%);border:1px solid var(--glass-border);border-radius:var(--r-md);box-shadow:var(--glass-shadow)}
+    .token-panel h2{font-size:20px;font-weight:700;letter-spacing:-0.018em;margin:0 0 4px}
+    .token-panel .sub{color:var(--ink-3);font-size:13px;margin-bottom:20px;max-width:680px;line-height:1.55}
+    .section-title{font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink-3);font-weight:600;margin:18px 0 8px}
+    .token-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:14px}
+    .tok{background:var(--glass-1);border:1px solid var(--glass-border);border-radius:var(--r-sm);padding:10px 12px;display:flex;align-items:center;gap:10px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+    .tok .chip{width:30px;height:30px;border-radius:6px;border:1px solid var(--glass-border);flex-shrink:0}
+    .tok .name{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-1);font-weight:500}
+    .tok .val{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);margin-top:2px}
+    .code-block{background:rgba(0,0,0,0.4);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--glass-border);border-radius:var(--r-sm);padding:14px 16px;font-family:var(--font-mono);font-size:11.5px;line-height:1.65;color:var(--ink-2);overflow-x:auto;white-space:pre}
+    .code-block .k{color:var(--accent-1)}
+    .code-block .s{color:var(--accent-3)}
+    .code-block .c{color:var(--ink-4);font-style:italic}
+    .code-block .v{color:var(--accent-2)}
+
+    .back-bar{position:absolute;left:18px;bottom:18px;display:flex;gap:12px;align-items:center;font-size:11.5px;z-index:10}
+    .back-bar a{color:rgba(255,255,255,0.7);padding:4px 10px;background:var(--glass-1);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--glass-border);border-radius:var(--r-pill)}
+    .back-bar a:hover{color:#fff;background:var(--glass-2)}
+    .back-bar .tag-version{font-family:var(--font-mono);color:rgba(255,255,255,0.5);padding:4px 10px;background:var(--glass-1);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--glass-border);border-radius:var(--r-pill)}
+  </style>
+</head>
+<body>
+<div class="app">
+  <!-- Top bar (floating glass on vivid bg) -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-glyph">M</span>
+      <span class="brand-name">MiniMax Studio</span>
+    </div>
+    <div class="breadcrumb">
+      <span class="crumb">Library</span>
+      <span class="sep">/</span>
+      <span class="crumb current">Generations · 2026-09-02</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" title="Search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </button>
+      <button class="icon-btn" title="Notifications">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg>
+      </button>
+      <span class="avatar-btn" title="Kai">K</span>
+    </div>
+  </header>
+
+  <!-- 3-column body -->
+  <div class="body">
+    <!-- Sidebar (glass) -->
+    <aside class="sidebar">
+      <div class="panel glass">
+        <div class="ph">Library <span class="count">128</span></div>
+        <div class="nav">
+          <div class="item active">
+            <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            All assets
+            <span class="badge">128</span>
+          </div>
+          <div class="item">
+            <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18"/></svg>
+            Generations
+          </div>
+          <div class="item">
+            <svg class="ico" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Uploads
+          </div>
+          <div class="item">
+            <svg class="ico" viewBox="0 0 24 24"><path d="M12 2l2.4 5 5.6.8-4 3.9 1 5.6L12 14.8 6.9 17.3l1-5.6-4-3.9 5.6-.8z"/></svg>
+            Favorites
+          </div>
+          <div class="item">
+            <svg class="ico" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+            Collections
+          </div>
+        </div>
+      </div>
+
+      <div class="panel glass">
+        <div class="ph">Model</div>
+        <div class="nav">
+          <div class="item active">
+            <span style="width:16px;height:16px;border-radius:4px;background:linear-gradient(135deg,#ff6ec7,#c76eff);margin-left:0;margin-right:0"></span>
+            Hailuo 2.6
+          </div>
+          <div class="item">
+            <span style="width:16px;height:16px;border-radius:4px;background:linear-gradient(135deg,#6ec7ff,#6effc7)"></span>
+            Music 2.6
+          </div>
+          <div class="item">
+            <span style="width:16px;height:16px;border-radius:4px;background:linear-gradient(135deg,#c7ff6e,#fff700)"></span>
+            Speech 2.8
+          </div>
+          <div class="item">
+            <span style="width:16px;height:16px;border-radius:4px;background:linear-gradient(135deg,#ff9d6e,#ff6ec7)"></span>
+            MiniMax M3
+          </div>
+        </div>
+      </div>
+
+      <div class="panel glass">
+        <div class="ph">Quick actions</div>
+        <div class="pb">
+          <button class="btn btn-grad btn-block" style="margin-bottom:8px">+ New generation</button>
+          <button class="btn btn-glass btn-block">Import from URL</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main canvas (gallery) -->
+    <section class="canvas glass">
+      <div class="canvas-head">
+        <div>
+          <h1>Recent generations</h1>
+          <div class="lede">128 assets · sorted by recency · 4 selected</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="glass-pill"><span class="dot"></span>All synced</span>
+          <button class="btn btn-glass btn-sm" style="padding:6px 12px;font-size:12px">Export</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="seg">
+          <span class="opt active">All</span>
+          <span class="opt">Image</span>
+          <span class="opt">Video</span>
+          <span class="opt">Audio</span>
+        </div>
+        <span class="glass-pill" style="margin-left:6px">Aspect · 1:1</span>
+        <span class="glass-pill">Resolution · 4K</span>
+        <span class="glass-pill">Last 7 days</span>
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <div class="seg">
+            <span class="opt active">▦</span>
+            <span class="opt">▥</span>
+            <span class="opt">≡</span>
+          </div>
+        </div>
+      </div>
+      <div class="gallery">
+        <div class="tile selected"><div class="art art-a"></div><div class="check">✓</div><div class="meta"><span class="name">aurora_01</span><span class="type">video · 6s</span></div></div>
+        <div class="tile selected"><div class="art art-b"></div><div class="check">✓</div><div class="meta"><span class="name">dusk_loop</span><span class="type">video · 4s</span></div></div>
+        <div class="tile"><div class="art art-c"></div><div class="check">✓</div><div class="meta"><span class="name">radial_burst</span><span class="type">image</span></div></div>
+        <div class="tile selected"><div class="art art-d"></div><div class="check">✓</div><div class="meta"><span class="name">forest_glitch</span><span class="type">image</span></div></div>
+        <div class="tile"><div class="art art-e"></div><div class="check">✓</div><div class="meta"><span class="name">prism_anim</span><span class="type">video · 3s</span></div></div>
+        <div class="tile"><div class="art art-f"></div><div class="check">✓</div><div class="meta"><span class="name">nebula</span><span class="type">image</span></div></div>
+        <div class="tile selected"><div class="art art-g"></div><div class="check">✓</div><div class="meta"><span class="name">sunset_glow</span><span class="type">image</span></div></div>
+        <div class="tile"><div class="art art-h"></div><div class="check">✓</div><div class="meta"><span class="name">horizon_v2</span><span class="type">image</span></div></div>
+        <div class="tile"><div class="art art-i"></div><div class="check">✓</div><div class="meta"><span class="name">lime_swirl</span><span class="type">video · 8s</span></div></div>
+        <div class="tile"><div class="art art-j"></div><div class="check">✓</div><div class="meta"><span class="name">coral_horizon</span><span class="type">image</span></div></div>
+        <div class="tile"><div class="art art-k"></div><div class="check">✓</div><div class="meta"><span class="name">mint_static</span><span class="type">image</span></div></div>
+        <div class="tile"><div class="art art-l"></div><div class="check">✓</div><div class="meta"><span class="name">gradient_v3</span><span class="type">video · 5s</span></div></div>
+        <div class="tile"><div class="art art-m"></div><div class="check">✓</div><div class="meta"><span class="name">magenta_pulse</span><span class="type">image</span></div></div>
+        <div class="tile"><div class="art art-n"></div><div class="check">✓</div><div class="meta"><span class="name">arc_reactor</span><span class="type">image</span></div></div>
+        <div class="tile"><div class="art art-o"></div><div class="check">✓</div><div class="meta"><span class="name">grid_noise</span><span class="type">image</span></div></div>
+        <div class="tile"><div class="art art-p"></div><div class="check">✓</div><div class="meta"><span class="name">double_glow</span><span class="type">image</span></div></div>
+        <div class="tile"><div class="art art-a"></div><div class="check">✓</div><div class="meta"><span class="name">aurora_02</span><span class="type">video · 4s</span></div></div>
+        <div class="tile"><div class="art art-c"></div><div class="check">✓</div><div class="meta"><span class="name">radial_v2</span><span class="type">image</span></div></div>
+        <div class="tile"><div class="art art-e"></div><div class="check">✓</div><div class="meta"><span class="name">prism_loop</span><span class="type">video · 6s</span></div></div>
+        <div class="tile"><div class="art art-j"></div><div class="check">✓</div><div class="meta"><span class="name">coral_glow</span><span class="type">image</span></div></div>
+      </div>
+    </section>
+
+    <!-- Inspector (right) -->
+    <aside class="inspector">
+      <div class="panel glass">
+        <div class="preview art-e">
+          <span class="badge"><span class="dot"></span>Selected · 4 items</span>
+        </div>
+        <div class="ph">Generation</div>
+        <div class="pb">
+          <div class="field-row"><span class="k">Model</span><span class="v">Hailuo 2.6</span></div>
+          <div class="field-row"><span class="k">Prompt</span><span class="v" style="max-width:60%;text-align:right">"aurora over mountains, slow drift, cinematic"</span></div>
+          <div class="field-row"><span class="k">Aspect</span><span class="v">16:9</span></div>
+          <div class="field-row"><span class="k">Resolution</span><span class="v">3840×2160</span></div>
+          <div class="field-row"><span class="k">Duration</span><span class="v">6.0s</span></div>
+          <div class="field-row"><span class="k">FPS</span><span class="v">24</span></div>
+          <div class="field-row"><span class="k">Seed</span><span class="v">4218829104</span></div>
+          <div class="field-row"><span class="k">Status</span><span class="v" style="color:var(--accent-3)">● Complete</span></div>
+        </div>
+      </div>
+
+      <div class="panel glass">
+        <div class="ph">Color palette</div>
+        <div class="pb">
+          <div class="swatches-row">
+            <div class="sw-mini active" style="background:#ff6ec7"></div>
+            <div class="sw-mini" style="background:#c76eff"></div>
+            <div class="sw-mini" style="background:#6ec7ff"></div>
+            <div class="sw-mini" style="background:#c7ff6e"></div>
+            <div class="sw-mini" style="background:#ff9d6e"></div>
+            <div class="sw-mini" style="background:#6effc7"></div>
+            <div class="sw-mini" style="background:#fff700"></div>
+            <div class="sw-mini" style="background:#0a0a1f;border:1px solid var(--glass-border)"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel glass">
+        <div class="ph">Render progress</div>
+        <div class="pb">
+          <div style="font-size:12.5px;color:var(--ink-2);margin-bottom:4px">Encoding · H.265 · 4K</div>
+          <div class="progress"><div class="bar" style="width:72%"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink-3);font-family:var(--font-mono)">
+            <span>72%</span><span>~38s remaining</span>
+          </div>
+          <button class="btn btn-grad btn-block" style="margin-top:12px">Download · 18.4 MB</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Back link floating over the gradient -->
+  <div class="back-bar">
+    <a href="styles.html">← All styles</a>
+    <span class="tag-version">webapp-glass · v1</span>
+  </div>
+</div>
+</body>
+</html>

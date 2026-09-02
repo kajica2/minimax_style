@@ -57,11 +57,9 @@
 <div class="page">
   <header>
     <div class="kicker">MiniMax Design System · Variant Explorer</div>
-    <h1>Six style guides. One brand.</h1>
+    <h1>Six style guides. Three app skins.</h1>
     <p class="lead">
-      Each variant below restates the same MiniMax design system with a different visual language.
-      Same 14 sections, same content, same brand voice — only the tokens change.
-      Use the toolbar to jump to a specific style, or browse the cards to compare side by side.
+      Six visual variants of the same MiniMax brand, plus three full web app shells (issue tracker, payments, creative studio) each modeled on a different 2026 trend. Use the toolbar to jump straight to a variant, or browse the cards to compare side by side.
     </p>
     <div class="toolbar">
       <span class="label">Jump to:</span>
@@ -133,7 +131,55 @@
     
   </section>
 
-  <section class="compare">
+  <section style="margin-top:72px">
+    <h2 style="font-family:'Outfit',sans-serif;font-size:32px;font-weight:600;letter-spacing:-0.022em;line-height:1.1;margin:0 0 10px;color:var(--ink)">Web app skins</h2>
+    <p style="font-size:15px;color:var(--slate);max-width:780px;margin:0 0 28px;line-height:1.55">Three real, full app shells — issue tracker, payments dashboard, creative studio — each re-skinned from a 2026 trend source. Every page ships a token panel showing the 5–6 variables you change to rebrand the whole shell. The principle: skinning is a token swap, not a component rewrite.</p>
+    <div class="grid">
+      <a class="card" href="webapp-linear.html" style="background:#08090a;color:#f7f8f8;border-color:#23252a">
+        <div class="card-kicker" style="color:#8a8f98">App skin 1 · Linear-style</div>
+        <div class="card-title">Linear · dark, single accent</div>
+        <div class="card-body">Issue tracker shell. Inter Variable · #5e6ad2 indigo on near-black · surface ladder over shadows · single accent rule. Modeled on linear.app's dark-mode discipline.</div>
+        <div class="palette">
+          <span class="chip" style="background:#08090a;border:1px solid #23252a"></span>
+          <span class="chip" style="background:#191a1b"></span>
+          <span class="chip" style="background:#28282c"></span>
+          <span class="chip" style="background:#5e6ad2"></span>
+          <span class="chip" style="background:#27a644"></span>
+        </div>
+        <div class="card-meta" style="color:#62666d">Inter Variable · surface ladder · 5-token rebrand</div>
+      </a>
+
+      <a class="card" href="webapp-stripe.html" style="background:#ffffff;color:#061b31;border-color:#e6ebf1">
+        <div class="card-kicker" style="color:#697386">App skin 2 · Stripe-style</div>
+        <div class="card-title">Stripe · light, typographic</div>
+        <div class="card-body">Payments dashboard shell. Source Sans 3 (Söhne substitute) · #533afd indigo on white · weight-300 display · tabular numbers · density with breathing room. Modeled on stripe.com's restraint.</div>
+        <div class="palette">
+          <span class="chip" style="background:#ffffff;border:1px solid #e6ebf1"></span>
+          <span class="chip" style="background:#f6f9fc"></span>
+          <span class="chip" style="background:#eaf0f6"></span>
+          <span class="chip" style="background:#533afd"></span>
+          <span class="chip" style="background:#81b81a"></span>
+        </div>
+        <div class="card-meta" style="color:#8898aa">Source Sans 3 · typographic anchor · 4-token rebrand</div>
+      </a>
+
+      <a class="card" href="webapp-glass.html" style="background:linear-gradient(135deg,#ff6ec7 0%,#c76eff 50%,#6ec7ff 100%);color:#ffffff;border-color:rgba(255,255,255,0.3)">
+        <div class="card-kicker" style="color:rgba(255,255,255,0.8)">App skin 3 · Liquid Glass</div>
+        <div class="card-title">Liquid Glass · disciplined 2026</div>
+        <div class="card-body">Creative studio shell. Backdrop-filter blur on translucent surfaces · vivid gradient underneath · 1px white border as the highlight · GPU-aware (limited blurred surfaces). Disciplined 2026 glassmorphism, not 2021 over-use.</div>
+        <div class="palette">
+          <span class="chip" style="background:rgba(255,255,255,0.18);backdrop-filter:blur(8px)"></span>
+          <span class="chip" style="background:rgba(255,255,255,0.10);backdrop-filter:blur(8px)"></span>
+          <span class="chip" style="background:#ff6ec7"></span>
+          <span class="chip" style="background:#6ec7ff"></span>
+          <span class="chip" style="background:#c7ff6e"></span>
+        </div>
+        <div class="card-meta" style="color:rgba(255,255,255,0.7)">Inter · backdrop-filter · 3-token rebrand</div>
+      </a>
+    </div>
+  </section>
+
+  <section class="compare" style="margin-top:64px">
     <h2>Side-by-side comparison</h2>
     <p>Pick the variant whose shape, color, and voice match the brand context. All variants are static, self-contained, and served by GitHub Pages.</p>
     <table class="compare-table">
@@ -145,6 +191,10 @@
         <tr><td>4</td><td><div class="name">Brutalist</div><div class="desc">Neon · sharp · oversized</div></td><td>Sharp (0px)</td><td>Cream</td><td>Space Mono 700</td><td><a href="style-3.html">style-3.html →</a></td></tr>
         <tr><td>5</td><td><div class="name">Editorial</div><div class="desc">Serif · newspaper · warm</div></td><td>Soft (4–12px)</td><td>Cream</td><td>Playfair Display 700</td><td><a href="style-4.html">style-4.html →</a></td></tr>
         <tr><td>6</td><td><div class="name">Cyber-Synthwave</div><div class="desc">Neon · dark · geometric</div></td><td>Rounded (12–24px)</td><td>Deep purple / navy</td><td>Orbitron 800</td><td><a href="style-5.html">style-5.html →</a></td></tr>
+        <tr><td colspan="6" style="background:var(--surface-soft);font-size:10.5px;text-transform:uppercase;letter-spacing:0.1em;color:var(--stone);font-weight:700;padding:10px 14px">Web app skins</td></tr>
+        <tr><td>W1</td><td><div class="name">Linear (issue tracker)</div><div class="desc">Dark · surface ladder · single accent</div></td><td>Soft (6–8px)</td><td>Near-black</td><td>Inter Variable 510</td><td><a href="webapp-linear.html">webapp-linear.html →</a></td></tr>
+        <tr><td>W2</td><td><div class="name">Stripe (payments)</div><div class="desc">Light · typographic · tabular</div></td><td>Tight (4–6px)</td><td>White</td><td>Source Sans 3 300</td><td><a href="webapp-stripe.html">webapp-stripe.html →</a></td></tr>
+        <tr><td>W3</td><td><div class="name">Liquid Glass (studio)</div><div class="desc">Vivid · backdrop-blur · layered</div></td><td>Rounded (8–14px)</td><td>Vivid gradient</td><td>Inter 700</td><td><a href="webapp-glass.html">webapp-glass.html →</a></td></tr>
       </tbody>
     </table>
   </section>
