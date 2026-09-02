@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MiniMax Style · All Variants</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --canvas:#ffffff;--surface:#f7f8fa;--surface-soft:#f2f3f5;
+      --ink:#0a0a0a;--ink-2:#18181B;--charcoal:#222;--slate:#45515E;--steel:#5F5F5F;--stone:#8E8E93;--muted:#A8AAB2;
+      --hairline:#E5E7EB;--hairline-soft:#EAECF0;
+      --brand-coral:#FF5530;--brand-magenta:#EA5EC1;--brand-blue:#1456F0;--brand-cyan:#3DAEFF;--brand-purple:#A855F7;
+      --shadow-card:0 12px 16px -4px rgba(36,36,36,0.08), 0 2px 4px rgba(36,36,36,0.04);
+      --shadow-glow:0 0 15px rgba(44,30,116,0.16);
+      --r-md:16px;--r-lg:24px;--r-xl:32px;--r-pill:9999px;
+    }
+    *{box-sizing:border-box}html,body{margin:0;padding:0}
+    body{font-family:"DM Sans","Helvetica Neue",Helvetica,Arial,sans-serif;background:var(--canvas);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+    code,.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+    .page{max-width:1240px;margin:0 auto;padding:64px 56px 120px}
+    header{margin-bottom:56px}
+    .kicker{font-size:12px;text-transform:uppercase;letter-spacing:0.18em;color:var(--stone);font-weight:600;margin-bottom:10px}
+    h1{font-family:"Outfit",sans-serif;font-size:64px;font-weight:600;letter-spacing:-0.025em;line-height:1.05;margin:0 0 16px}
+    .lead{font-size:18px;color:var(--slate);max-width:760px;margin:0 0 36px;line-height:1.6}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:40px;padding:18px 22px;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-md)}
+    .toolbar .label{font-size:11.5px;text-transform:uppercase;letter-spacing:0.12em;color:var(--stone);font-weight:700;margin-right:6px}
+    .toolbar a{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:#fff;border:1px solid var(--hairline);border-radius:var(--r-pill);color:var(--ink);text-decoration:none;font-size:13.5px;font-weight:500;transition:all 0.15s ease}
+    .toolbar a:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
+    .toolbar a.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px}
+    .card{display:flex;flex-direction:column;gap:10px;padding:28px;border:1px solid var(--hairline);border-radius:var(--r-lg);text-decoration:none;transition:all 0.2s ease;box-shadow:var(--shadow-card);min-height:280px}
+    .card:hover{transform:translateY(-3px);box-shadow:0 18px 28px -10px rgba(36,36,36,0.15),0 4px 8px rgba(36,36,36,0.06)}
+    .card .card-kicker{font-size:11px;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;opacity:0.7}
+    .card .card-title{font-family:"Outfit",sans-serif;font-weight:600;font-size:24px;letter-spacing:-0.015em;line-height:1.15;margin:0}
+    .card .card-body{font-size:14px;line-height:1.55;opacity:0.78;flex-grow:1}
+    .card .palette{display:flex;gap:6px;margin-top:6px}
+    .card .palette .chip{width:24px;height:24px;border-radius:6px;display:block;border:1px solid rgba(0,0,0,0.08)}
+    .card .card-meta{font-family:"JetBrains Mono",monospace;font-size:11.5px;opacity:0.6;margin-top:6px;text-transform:uppercase;letter-spacing:0.06em}
+    .compare{margin-top:64px;padding:36px;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-lg)}
+    .compare h2{font-family:"Outfit",sans-serif;font-size:22px;font-weight:600;margin:0 0 14px}
+    .compare p{margin:0 0 18px;color:var(--slate);font-size:14px;line-height:1.6}
+    .compare-table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--hairline)}
+    .compare-table th,.compare-table td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--hairline-soft)}
+    .compare-table th{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--stone);font-weight:700;background:var(--surface-soft)}
+    .compare-table td .name{font-weight:600}
+    .compare-table td .desc{font-size:11.5px;color:var(--slate);margin-top:2px}
+    .compare-table td a{color:var(--brand-blue);text-decoration:none;font-weight:600}
+    .compare-table td a:hover{text-decoration:underline}
+    footer{margin-top:64px;text-align:center;color:var(--stone);font-size:12.5px}
+    @media (max-width:720px){.page{padding:32px 20px 80px}h1{font-size:42px}.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kicker">MiniMax Design System · Variant Explorer</div>
+    <h1>Six style guides. One brand.</h1>
+    <p class="lead">
+      Each variant below restates the same MiniMax design system with a different visual language.
+      Same 14 sections, same content, same brand voice — only the tokens change.
+      Use the toolbar to jump to a specific style, or browse the cards to compare side by side.
+    </p>
+    <div class="toolbar">
+      <span class="label">Jump to:</span>
+      <a class="primary" href="index.html">1 · Original</a>
+      <a href="style-1.html">2 · Noir</a>
+      <a href="style-2.html">3 · Aurora</a>
+      <a href="style-3.html">4 · Brutalist</a>
+      <a href="style-4.html">5 · Editorial</a>
+      <a href="style-5.html">6 · Cyber-Synthwave</a>
+    </div>
+  </header>
+
+  <section class="grid">
+    
+    <a class="card" href="index.html" style="background:#ffffff;color:#0a0a0a;border-color:#E5E7EB">
+      <div class="card-kicker">Style 1 of 6 · Original</div>
+      <div class="card-title">Original · DM Sans + Outfit</div>
+      <div class="card-body">Canonical MiniMax system. White canvas, 90% monochrome, saturated hues reserved for product identity moments.</div>
+      <div class="palette">
+        <span class="chip" style="background:#0a0a0a"></span>
+        <span class="chip" style="background:#ffffff;border:1px solid #E5E7EB"></span>
+        <span class="chip" style="background:#FF5530"></span>
+        <span class="chip" style="background:#EA5EC1"></span>
+        <span class="chip" style="background:#1456F0"></span>
+        <span class="chip" style="background:#A855F7"></span>
+      </div>
+      <div class="card-meta">DM Sans / Outfit / JetBrains Mono</div>
+    </a>
+    
+    <a class="card" href="style-1.html" style="background:#ffffff;color:#000000;border-color:#000000">
+      <div class="card-kicker">Style 2 of 6 · Noir</div>
+      <div class="card-title">Noir</div>
+      <div class="card-body">Monochrome · sharp · terminal-zine. Same 14-section content, different visual system. Click to preview the full guide.</div>
+      <div class="palette"><span class="chip" style="background:#000000"></span><span class="chip" style="background:#ff0033"></span><span class="chip" style="background:#0033ff"></span><span class="chip" style="background:#ff00aa"></span><span class="chip" style="background:#6600ff"></span></div>
+      <div class="card-meta">Noir tokens · preview →</div>
+    </a>
+    
+    <a class="card" href="style-2.html" style="background:#fdfcff;color:#2d2454;border-color:#d8c8f5">
+      <div class="card-kicker">Style 3 of 6 · Aurora</div>
+      <div class="card-title">Aurora</div>
+      <div class="card-body">Pastel · glass · friendly. Same 14-section content, different visual system. Click to preview the full guide.</div>
+      <div class="palette"><span class="chip" style="background:#ff9eb5"></span><span class="chip" style="background:#d8a8ff"></span><span class="chip" style="background:#a8c8ff"></span><span class="chip" style="background:#9ee5f5"></span><span class="chip" style="background:#c5a8ff"></span></div>
+      <div class="card-meta">Aurora tokens · preview →</div>
+    </a>
+    
+    <a class="card" href="style-3.html" style="background:#f4ede1;color:#0a0a0a;border-color:#0a0a0a">
+      <div class="card-kicker">Style 4 of 6 · Brutalist</div>
+      <div class="card-title">Brutalist</div>
+      <div class="card-body">Neon · sharp · zine. Same 14-section content, different visual system. Click to preview the full guide.</div>
+      <div class="palette"><span class="chip" style="background:#ff4500"></span><span class="chip" style="background:#ff00ff"></span><span class="chip" style="background:#0033ff"></span><span class="chip" style="background:#00e5ff"></span><span class="chip" style="background:#ffd400"></span></div>
+      <div class="card-meta">Brutalist tokens · preview →</div>
+    </a>
+    
+    <a class="card" href="style-4.html" style="background:#f6f1e7;color:#0f1e3d;border-color:#c8bfa6">
+      <div class="card-kicker">Style 5 of 6 · Editorial</div>
+      <div class="card-title">Editorial</div>
+      <div class="card-body">Serif · newspaper · warm. Same 14-section content, different visual system. Click to preview the full guide.</div>
+      <div class="palette"><span class="chip" style="background:#b04a3e"></span><span class="chip" style="background:#8e3a6e"></span><span class="chip" style="background:#1e4a8e"></span><span class="chip" style="background:#3a7a8e"></span><span class="chip" style="background:#a87a2e"></span></div>
+      <div class="card-meta">Editorial tokens · preview →</div>
+    </a>
+    
+    <a class="card" href="style-5.html" style="background:#0a0a1a;color:#e8e8ff;border-color:#2a2a5e">
+      <div class="card-kicker">Style 6 of 6 · Cyber-Synthwave</div>
+      <div class="card-title">Cyber-Synthwave</div>
+      <div class="card-body">Neon · dark · geometric. Same 14-section content, different visual system. Click to preview the full guide.</div>
+      <div class="palette"><span class="chip" style="background:#ff3a6e"></span><span class="chip" style="background:#ff00d4"></span><span class="chip" style="background:#00aaff"></span><span class="chip" style="background:#00f0ff"></span><span class="chip" style="background:#fff700"></span></div>
+      <div class="card-meta">Cyber-Synthwave tokens · preview →</div>
+    </a>
+    
+  </section>
+
+  <section class="compare">
+    <h2>Side-by-side comparison</h2>
+    <p>Pick the variant whose shape, color, and voice match the brand context. All variants are static, self-contained, and served by GitHub Pages.</p>
+    <table class="compare-table">
+      <thead><tr><th>#</th><th>Variant</th><th>Shape</th><th>Surface</th><th>Display font</th><th>Open</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><div class="name">Original</div><div class="desc">Canonical MiniMax</div></td><td>Pills (9999px)</td><td>White</td><td>Outfit 600</td><td><a href="index.html">index.html →</a></td></tr>
+        <tr><td>2</td><td><div class="name">Noir</div><div class="desc">Monochrome · terminal · zine</div></td><td>Sharp (0px)</td><td>White / black</td><td>IBM Plex Mono 700</td><td><a href="style-1.html">style-1.html →</a></td></tr>
+        <tr><td>3</td><td><div class="name">Aurora</div><div class="desc">Pastel · glass · friendly</div></td><td>Rounded (28px)</td><td>Lilac gradient</td><td>Quicksand 700</td><td><a href="style-2.html">style-2.html →</a></td></tr>
+        <tr><td>4</td><td><div class="name">Brutalist</div><div class="desc">Neon · sharp · oversized</div></td><td>Sharp (0px)</td><td>Cream</td><td>Space Mono 700</td><td><a href="style-3.html">style-3.html →</a></td></tr>
+        <tr><td>5</td><td><div class="name">Editorial</div><div class="desc">Serif · newspaper · warm</div></td><td>Soft (4–12px)</td><td>Cream</td><td>Playfair Display 700</td><td><a href="style-4.html">style-4.html →</a></td></tr>
+        <tr><td>6</td><td><div class="name">Cyber-Synthwave</div><div class="desc">Neon · dark · geometric</div></td><td>Rounded (12–24px)</td><td>Deep purple / navy</td><td>Orbitron 800</td><td><a href="style-5.html">style-5.html →</a></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>MiniMax Style Guide · variant explorer · 2026 · <a href="https://github.com/kajica2/minimax_style" style="color:inherit">github.com/kajica2/minimax_style</a></footer>
+</div>
+</body>
+</html>
